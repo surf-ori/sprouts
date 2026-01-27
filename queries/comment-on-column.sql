@@ -1,0 +1,1 @@
+COMMENT ON COLUMN {dataset}.{table}.{column} IS '{description}';

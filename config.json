@@ -1,0 +1,5 @@
+{
+    "datalake": "sprouts",
+    "raw-data-path": "raw-data",
+    "data-path": "data"
+}
