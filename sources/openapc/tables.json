@@ -1,0 +1,164 @@
+{
+    "apc": {
+        "description": "This is the original data set OpenAPC started with. It collects cost data on Article Processing Charges (APCs) on a per-publication basis. It consists of 18 metadata fields, with 5 of them being mandatory when contributing data.",
+        "raw-files": {
+            "path": "apc_de.csv",
+            "format": "csv"
+        },
+        "schema": {
+            "institution": "VARCHAR",
+            "period": "BIGINT",
+            "euro": "DOUBLE",
+            "doi": "VARCHAR",
+            "is_hybrid": "BOOLEAN",
+            "publisher": "VARCHAR",
+            "journal_full_title": "VARCHAR",
+            "issn": "VARCHAR",
+            "issn_print": "VARCHAR",
+            "issn_electronic": "VARCHAR",
+            "issn_l": "VARCHAR",
+            "license_ref": "VARCHAR",
+            "indexed_in_crossref": "BOOLEAN",
+            "pmid": "VARCHAR",
+            "pmcid": "VARCHAR",
+            "ut": "VARCHAR",
+            "url": "VARCHAR",
+            "doaj": "BOOLEAN"
+        },
+        "column-descriptions": {
+            "institution": "Top-level organisation to which the reported costs are allocated, e.g. \"Bielefeld University\"",
+            "period": "Year of APC payment (YYYY)",
+            "euro": "The APC amount that was paid in EURO. Includes VAT and any discounts",
+            "doi": "Digital Object Identifier",
+            "is_hybrid": "Determines if the article has been published in a hybrid journal (TRUE) or in fully/Gold OA journal (FALSE)",
+            "publisher": "Name of the publication house that has charged the fee [from Crossref]",
+            "journal_full_title": "Full name of periodical that contains the article [from Crossref]",
+            "issn": "International Standard Serial Number [from Crossref]",
+            "issn_print": "International Standard Serial Number - print version [from Crossref]",
+            "issn_electronic": "International Standard Serial Number - electronic version [from Crossref]",
+            "issn_l": "Linking International Standard Serial Number [from ISSN International Centre]",
+            "license_ref": "License under which the article has been published [from Crossref]",
+            "indexed_in_crossref": "indicates if the contribution is registered with the DOI agency CrossRef (TRUE/FALSE) [from Crossref]",
+            "pmid": "id for metadata records indexed in Europe Pubmed Central (Europe PMC)",
+            "pmcid": "id for articles available in Europe PubMed Central full text collection",
+            "ut": "Web of Science unique item id",
+            "url": "URL to article if no DOI is available",
+            "doaj": "Indicates if the journal is indexed in the Directory of Open Access Journals (TRUE/FALSE)"
+        }
+    },
+    "apc_additional_costs": {
+        "description": "The APC Additional Costs data set is not intended to be a stand-alone data set, but is used to enrich the APC data set with additional costs.",
+        "raw-files": {
+            "path": "apc_de_additional_costs.csv",
+            "format": "csv"
+        },
+        "schema": {
+            "doi": "VARCHAR",
+            "colour charge": "VARCHAR",
+            "cover charge": "VARCHAR",
+            "page charge": "VARCHAR",
+            "permission": "VARCHAR",
+            "reprint": "VARCHAR",
+            "submission fee": "VARCHAR",
+            "payment fee": "VARCHAR",
+            "other": "VARCHAR"
+        },
+        "column-descriptions": {
+            "doi": "Linked to an existing DOI in the APC data set",
+            "colour charge": "Additional costs for publishing figures in colour, incl. VAT",
+            "cover charge": "Additional costs for featuring an article on the journal cover / cover image, incl. VAT",
+            "page charge": "Additional costs for overlength, incl. VAT",
+            "permission": "Licence fee / charges for re-using e.g. an image from another previously published publication, including VAT.",
+            "reprint": "Fee for reprinting publications, incl. VAT",
+            "submission fee": "Fee for submitting an article, incl. VAT",
+            "payment fee": "Additional costs for transactions (bank charges, extra charge for payments via credit card), incl. VAT",
+            "other": "Other additional costs (e.g. translation charges, abstract charges, etc.), incl. VAT"
+        }
+    },
+    "bpc": {
+        "description": "This data set is collects data on BPCs (Book Processing Charges). It consists of 13 fields, with 5 being mandatory.",
+        "raw-files": {
+            "path": "bpc.csv",
+            "format": "csv"
+        },
+        "schema": {
+            "institution": "VARCHAR",
+            "period": "BIGINT",
+            "euro": "DOUBLE",
+            "doi": "VARCHAR",
+            "backlist_oa": "BOOLEAN",
+            "publisher": "VARCHAR",
+            "book_title": "VARCHAR",
+            "isbn": "VARCHAR",
+            "isbn_print": "VARCHAR",
+            "isbn_electronic": "VARCHAR",
+            "license_ref": "VARCHAR",
+            "indexed_in_crossref": "BOOLEAN",
+            "doab": "BOOLEAN"
+        },
+        "column-descriptions": {
+            "institution": "Top-level organisation to which the reported costs are allocated, e.g. \"Bielefeld University\"",
+            "period": "Year of BPC payment (YYYY)",
+            "euro": "The BPC amount that was paid in EURO. Includes VAT and any discounts",
+            "doi": "Digital Object Identifier",
+            "backlist_oa": "Was the book published OA in the first place (FALSE) or was it already part of a publisher's backlist and became OA retroactively (TRUE)?",
+            "publisher": "Name of the publication house that has charged the fee [from Crossref]",
+            "book_title": "Title of the monograph [from Crossref]",
+            "isbn": "International Standard Book Number [from Crossref]",
+            "isbn_print": "International Standard Book Number - print version [from Crossref]",
+            "isbn_electronic": "International Standard Book Number - electronic version [from Crossref]",
+            "license_ref": "License under which the book has been published [from Crossref]",
+            "indexed_in_crossref": "indicates if the work is registered with the DOI agency CrossRef (TRUE/FALSE)",
+            "doab": "Indicates if the book is listed in the Directory of Open Access Books (TRUE/FALSE)"
+        }
+    },
+    "transformative_agreements": {
+        "description": "The Transformative Agreements (TA) data set contains metadata on OA journal articles which were not paid for with APCs, but published under transformative agreements instead. These kind of contracts are concluded with publishers and usually involve larger bodies like research organisations (e.g. Max Planck Society) or national consortia (Springer Compact agreements) as contract partners. Cost and payment modalities can differ a lot and are usually results of individual negotiations, which means that it is often difficult to assign a per-publication price tag. Consequently, most records in the data set do not include cost information and the euro field is not mandatory.",
+        "raw-files": {
+            "path": "transformative_agreements.csv",
+            "format": "csv"
+        },
+        "schema": {
+            "institution": "VARCHAR",
+            "period": "BIGINT",
+            "euro": "VARCHAR",
+            "doi": "VARCHAR",
+            "is_hybrid": "BOOLEAN",
+            "publisher": "VARCHAR",
+            "journal_full_title": "VARCHAR",
+            "issn": "VARCHAR",
+            "issn_print": "VARCHAR",
+            "issn_electronic": "VARCHAR",
+            "issn_l": "VARCHAR",
+            "license_ref": "VARCHAR",
+            "indexed_in_crossref": "BOOLEAN",
+            "pmid": "VARCHAR",
+            "pmcid": "VARCHAR",
+            "ut": "VARCHAR",
+            "url": "VARCHAR",
+            "doaj": "BOOLEAN",
+            "agreement": "VARCHAR"
+        },
+        "column-descriptions": {
+            "institution": "Top-level organisation the article author is affiliated with",
+            "period": "Year of payment (YYYY)",
+            "euro": "Article cost, usually calculated in hindsight on an agreed formula",
+            "doi": "Digital Object Identifier",
+            "is_hybrid": "Determines if the article has been published in a hybrid journal (TRUE) or in fully/Gold OA journal (FALSE)",
+            "publisher": "Name of the publisher the TA was concluded with [from Crossref]",
+            "journal_full_title": "Full name of periodical that contains the article [from Crossref]",
+            "issn": "International Standard Serial Number [from Crossref]",
+            "issn_print": "International Standard Serial Number - print version [from Crossref]",
+            "issn_electronic": "International Standard Serial Number - electronic version [from Crossref]",
+            "issn_l": "Linking International Standard Serial Number [from ISSN International Centre]",
+            "license_ref": "License under which the article has been published [from Crossref]",
+            "indexed_in_crossref": "indicates if the contribution is registered with the DOI agency CrossRef (TRUE/FALSE)",
+            "pmid": "id for metadata records indexed in Europe Pubmed Central (Europe PMC)",
+            "pmcid": "id for articles available in Europe PubMed Central full text collection",
+            "ut": "Web of Science unique item id",
+            "url": "URL to article if no DOI is available (not used)",
+            "doaj": "Indicates if the journal is indexed in the Directory of Open Access Journals (TRUE/FALSE)",
+            "agreement": "Name of the transformative agreement the article was published under"
+        }
+    }
+}
