@@ -1,16 +1,17 @@
-.shell mkdir -p sources/openaire/schemas/
+.shell mkdir -p sources/{dataset}/schemas/
 
 .mode jsonl
-.once sources/openaire/schemas/communities_infrastructures.json
-PIVOT (
+.once sources/{dataset}/schemas/{table}_.json
+-- PIVOT (
     SELECT column_name, column_type
     FROM (
         DESCRIBE
-        FROM read_json('sample-data/openaire/community_infrastructure.json.gz')
-    )
-)
-ON column_name
-USING first(column_type);
+        FROM read_{format}('{rawdatapath}/{dataset}/{tablepath}')
+    );
+-- )
+-- ON column_name
+-- USING first(column_type);
 
-.shell cat schemas/openaire/publication.json | jq >schemas/openaire/publication_.json
-.shell cat schemas/openaire/publication.json | jq >schemas/openaire/publication_.json
+-- .shell <sources/{dataset}/schemas/{table}_.json jq >sources/{dataset}/schemas/{table}.json
+.shell <sources/{dataset}/schemas/{table}_.json jq -s '[.[] | {{(.column_name): .column_type}}] | add' >sources/{dataset}/schemas/{table}.json
+.shell rm sources/{dataset}/schemas/{table}_.json
