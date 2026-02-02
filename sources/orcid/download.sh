@@ -1,5 +1,5 @@
 raw_data_path=$(jq -r '."raw-data-path"' <../config.json)/orcid/
-log_file=$(jq -r '."log-path"' < ../config.json)/openalex/download/$(date -Iseconds -u).txt
+log_file=$(jq -r '."log-path"' < ../config.json)/orcid/download/$(date -Iseconds -u).txt
 
 cd $raw_data_path
 
