@@ -1,0 +1,9 @@
+{
+  "legalShortName": "VARCHAR",
+  "legalName": "VARCHAR",
+  "websiteUrl": "VARCHAR",
+  "alternativeNames": "VARCHAR[]",
+  "country": "STRUCT(code VARCHAR, \"label\" VARCHAR)",
+  "id": "VARCHAR",
+  "pids": "STRUCT(scheme VARCHAR, \"value\" VARCHAR)[]"
+}

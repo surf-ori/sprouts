@@ -1,7 +1,7 @@
 {
   "authors": "STRUCT(fullName VARCHAR, \"name\" VARCHAR, surname VARCHAR, rank BIGINT, pid STRUCT(id STRUCT(scheme VARCHAR, \"value\" VARCHAR), provenance STRUCT(provenance VARCHAR, trust VARCHAR)))[]",
-  "openAccessColor": "VARCHAR",
-  "publiclyFunded": "BOOLEAN",
+  "openAccessColor": "JSON",
+  "publiclyFunded": "JSON",
   "type": "VARCHAR",
   "language": "STRUCT(code VARCHAR, \"label\" VARCHAR)",
   "countries": "STRUCT(code VARCHAR, \"label\" VARCHAR, provenance STRUCT(provenance VARCHAR, trust VARCHAR))[]",
@@ -17,11 +17,11 @@
   "contributors": "VARCHAR[]",
   "coverages": "JSON",
   "bestAccessRight": "STRUCT(code VARCHAR, \"label\" VARCHAR, scheme VARCHAR)",
-  "container": "STRUCT(\"name\" VARCHAR, issnPrinted VARCHAR, issnOnline VARCHAR, issnLinking JSON, ep VARCHAR, iss VARCHAR, sp VARCHAR, vol VARCHAR, edition JSON, conferencePlace JSON, conferenceDate JSON)",
+  "container": "JSON",
   "documentationUrls": "JSON",
   "codeRepositoryUrl": "JSON",
   "programmingLanguage": "JSON",
-  "contactPeople": "JSON",
+  "contactPeople": "VARCHAR[]",
   "contactGroups": "JSON",
   "tools": "JSON",
   "size": "JSON",
@@ -32,8 +32,8 @@
   "pids": "STRUCT(scheme VARCHAR, \"value\" VARCHAR)[]",
   "dateOfCollection": "VARCHAR",
   "lastUpdateTimeStamp": "BIGINT",
-  "indicators": "STRUCT(citationImpact STRUCT(citationCount DOUBLE, influence DOUBLE, popularity DOUBLE, impulse DOUBLE, citationClass VARCHAR, influenceClass VARCHAR, impulseClass VARCHAR, popularityClass VARCHAR), usageCounts STRUCT(downloads BIGINT, \"views\" BIGINT))",
-  "instances": "STRUCT(license VARCHAR, \"type\" VARCHAR, urls VARCHAR[], publicationDate DATE, refereed VARCHAR, alternateIdentifiers STRUCT(scheme VARCHAR, \"value\" VARCHAR)[], accessRight STRUCT(code VARCHAR, \"label\" VARCHAR, scheme VARCHAR, openAccessRoute VARCHAR), pids STRUCT(scheme VARCHAR, \"value\" VARCHAR)[], articleProcessingCharge STRUCT(currency VARCHAR, amount VARCHAR))[]",
-  "isGreen": "BOOLEAN",
-  "isInDiamondJournal": "BOOLEAN"
+  "indicators": "STRUCT(citationImpact STRUCT(citationCount DOUBLE, influence DOUBLE, popularity DOUBLE, impulse DOUBLE, citationClass VARCHAR, influenceClass VARCHAR, impulseClass VARCHAR, popularityClass VARCHAR))",
+  "instances": "STRUCT(pids STRUCT(scheme VARCHAR, \"value\" VARCHAR)[], license VARCHAR, \"type\" VARCHAR, urls VARCHAR[], publicationDate DATE, refereed VARCHAR, accessRight STRUCT(code VARCHAR, \"label\" VARCHAR, scheme VARCHAR, openAccessRoute JSON), alternateIdentifiers STRUCT(scheme VARCHAR, \"value\" VARCHAR)[])[]",
+  "isGreen": "JSON",
+  "isInDiamondJournal": "JSON"
 }

@@ -1,0 +1,21 @@
+{
+  "institution": "VARCHAR",
+  "period": "BIGINT",
+  "euro": "VARCHAR",
+  "doi": "VARCHAR",
+  "is_hybrid": "BOOLEAN",
+  "publisher": "VARCHAR",
+  "journal_full_title": "VARCHAR",
+  "issn": "VARCHAR",
+  "issn_print": "VARCHAR",
+  "issn_electronic": "VARCHAR",
+  "issn_l": "VARCHAR",
+  "license_ref": "VARCHAR",
+  "indexed_in_crossref": "BOOLEAN",
+  "pmid": "VARCHAR",
+  "pmcid": "VARCHAR",
+  "ut": "VARCHAR",
+  "url": "VARCHAR",
+  "doaj": "BOOLEAN",
+  "agreement": "VARCHAR"
+}

@@ -1,0 +1,11 @@
+{
+  "doi": "VARCHAR",
+  "colour charge": "VARCHAR",
+  "cover charge": "VARCHAR",
+  "page charge": "VARCHAR",
+  "permission": "VARCHAR",
+  "reprint": "VARCHAR",
+  "submission fee": "VARCHAR",
+  "payment fee": "VARCHAR",
+  "other": "VARCHAR"
+}

@@ -1,0 +1,10 @@
+{
+  "provenance": "STRUCT(provenance VARCHAR, trust VARCHAR)",
+  "relType": "STRUCT(\"name\" VARCHAR, \"type\" VARCHAR)",
+  "source": "VARCHAR",
+  "sourceType": "VARCHAR",
+  "target": "VARCHAR",
+  "targetType": "VARCHAR",
+  "validated": "BOOLEAN",
+  "validationDate": "DATE"
+}

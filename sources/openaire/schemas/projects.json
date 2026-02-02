@@ -1,0 +1,18 @@
+{
+  "id": "VARCHAR",
+  "code": "VARCHAR",
+  "acronym": "VARCHAR",
+  "title": "VARCHAR",
+  "websiteUrl": "VARCHAR",
+  "startDate": "DATE",
+  "endDate": "DATE",
+  "callIdentifier": "VARCHAR",
+  "keywords": "VARCHAR",
+  "openAccessMandateForPublications": "BOOLEAN",
+  "openAccessMandateForDataset": "BOOLEAN",
+  "subjects": "VARCHAR[]",
+  "fundings": "STRUCT(shortName VARCHAR, \"name\" VARCHAR, jurisdiction VARCHAR, fundingStream STRUCT(id VARCHAR, description VARCHAR))[]",
+  "summary": "VARCHAR",
+  "granted": "STRUCT(currency VARCHAR, totalCost DOUBLE, fundedAmount DOUBLE)",
+  "h2020Programmes": "STRUCT(code VARCHAR, description VARCHAR)[]"
+}

@@ -1,0 +1,15 @@
+{
+  "institution": "VARCHAR",
+  "period": "BIGINT",
+  "euro": "DOUBLE",
+  "doi": "VARCHAR",
+  "backlist_oa": "BOOLEAN",
+  "publisher": "VARCHAR",
+  "book_title": "VARCHAR",
+  "isbn": "VARCHAR",
+  "isbn_print": "VARCHAR",
+  "isbn_electronic": "VARCHAR",
+  "license_ref": "VARCHAR",
+  "indexed_in_crossref": "BOOLEAN",
+  "doab": "BOOLEAN"
+}

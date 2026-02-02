@@ -1,1 +1,9 @@
-{"acronym":"VARCHAR","description":"VARCHAR","id":"VARCHAR","name":"VARCHAR","subjects":"VARCHAR[]","type":"VARCHAR","zenodoCommunity":"VARCHAR"}
+{
+  "acronym": "VARCHAR",
+  "description": "VARCHAR",
+  "id": "VARCHAR",
+  "name": "VARCHAR",
+  "type": "VARCHAR",
+  "subjects": "VARCHAR[]",
+  "zenodoCommunity": "VARCHAR"
+}
