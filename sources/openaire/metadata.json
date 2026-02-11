@@ -424,7 +424,7 @@
                 "fundings": "Funding information for the project.",
                 "summary": "Short summary of the project.",
                 "granted": "The money granted to the project.",
-                "h2020Programmes": "The H2020 programme funding the project.",
+                "h2020Programmes": "The H2020 programme funding the project."
             }
         },
         "relations": {

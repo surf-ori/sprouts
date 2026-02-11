@@ -105,7 +105,7 @@
                 "period": "Year of BPC payment (YYYY)",
                 "euro": "The BPC amount that was paid in EURO. Includes VAT and any discounts",
                 "doi": "Digital Object Identifier",
-                "backlist_oa": "Was the book published OA in the first place (FALSE) or was it already part of a publisher's backlist and became OA retroactively (TRUE)?",
+                "backlist_oa": "Was the book published OA in the first place (FALSE) or was it already part of a publishers backlist and became OA retroactively (TRUE)?",
                 "publisher": "Name of the publication house that has charged the fee [from Crossref]",
                 "book_title": "Title of the monograph [from Crossref]",
                 "isbn": "International Standard Book Number [from Crossref]",
