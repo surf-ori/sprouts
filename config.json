@@ -2,8 +2,8 @@
     "objectstore-key": "",
     "objectstore-secret": "",
     "datalake": "sprouts",
-    "raw-data-path": "raw-data",
-    "data-path": "data",
-    "catalog-path": ".",
-    "log-path": "logs"
+    "raw-data-path": "build/raw-data",
+    "data-path": "build/data",
+    "catalog-path": "build/.",
+    "log-path": "build/logs"
 }

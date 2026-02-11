@@ -30,9 +30,9 @@ def _(os):
 @app.cell
 def _(os, shutil):
     def write_queries(queries, datalake, dataset, query_set):
-        path = os.path.join('generated', datalake, dataset, query_set)
+        path = os.path.join('build/queries', datalake, dataset, query_set)
         if os.path.exists(path):
-            shutil.rmtree(path, )
+            shutil.rmtree(path)
         os.makedirs(path)
         for i, query in enumerate(queries):
             with open(f'{path}/{i:03}_{query['name']}.sql', 'w') as f:
@@ -43,7 +43,7 @@ def _(os, shutil):
 @app.cell
 def _(os, subprocess):
     def run_queries(datalake, dataset, query_set):
-        path = os.path.join('generated', datalake, dataset, query_set)
+        path = os.path.join('build/queries', datalake, dataset, query_set)
         # subprocess.run(['ls', path])
         for f in sorted(os.listdir(path)):
             subprocess.run(['duckdb', '-f', os.path.join(path, f)])
