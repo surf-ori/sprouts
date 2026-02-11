@@ -1,6 +1,9 @@
 {
+    "objectstore-key": "",
+    "objectstore-secret": "",
     "datalake": "sprouts",
     "raw-data-path": "raw-data",
     "data-path": "data",
+    "catalog-path": ".",
     "log-path": "logs"
 }
