@@ -1,5 +1,5 @@
-.shell rm -rf {datapath}
-.shell mkdir -p {datapath}
+-- .shell rm -rf {catalogpath}
+-- .shell mkdir -p {catalogpath}
 
-ATTACH 'ducklake:{datapath}/{datalake}.ducklake' as {datalake} (DATA_PATH {datapath});
+ATTACH 'ducklake:{catalogpath}/{datalake}.ducklake' as {datalake} (DATA_PATH "{datapath}");
 USE {datalake};

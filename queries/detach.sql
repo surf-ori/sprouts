@@ -1,0 +1,4 @@
+
+
+USE memory;
+DETACH {datalake};
