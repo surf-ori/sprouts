@@ -148,6 +148,13 @@ def _(load_query_templates):
 
 
 @app.cell
+def _(subprocess):
+    def download_dataset(dataset):
+        subprocess.run(f'./sources/{dataset}/download.sh', shell=True)
+    return (download_dataset,)
+
+
+@app.cell
 def _(json):
     with open('config.json') as f:
         config = json.load(f)
@@ -171,9 +178,16 @@ def _(mo, os):
 
 
 @app.cell
-def _(dataset_selection):
+def _(dataset_selection, mo):
     dataset = dataset_selection.value
+    mo.stop(dataset is None, 'Select a dataset first')
     return (dataset,)
+
+
+@app.cell
+def _(dataset, download_dataset):
+    download_dataset(dataset)
+    return
 
 
 @app.cell
@@ -199,116 +213,6 @@ def _(config, dataset, loading, write_queries):
 @app.cell
 def _(config, dataset, run_queries):
     run_queries(config['datalake'], dataset, 'loading')
-    return
-
-
-@app.cell
-def _():
-    #steps = {source: generate_queries(config, source) for source in sources}
-    return
-
-
-@app.cell
-def _(steps):
-    steps
-    return
-
-
-@app.cell
-def _(json, wrapper):
-    status = json.loads(wrapper.read_text())
-    return (status,)
-
-
-@app.cell
-def _(mo, status, table):
-    mo.accordion({
-        mo.md('{name} {status}').batch(name=q['name'], status=q['status']): mo.md(f'```sql\n{q['string']}\n```') for q in status[table.value]
-    })
-    return
-
-
-@app.cell
-def _(mo):
-    run = mo.ui.button(value=False, on_click=lambda value: not value, kind='success')
-    run
-    return (run,)
-
-
-@app.cell
-def _(run):
-    if run.value:
-        print('yeah')
-    return
-
-
-@app.cell
-def _(mo):
-    wrapper = mo.watch.file('status.json')
-    return (wrapper,)
-
-
-@app.cell
-def _():
-    mapping = {
-        "loaded": "success",
-        "loading": "warn",
-        "not loaded": "neutral",
-        "error": "danger"
-    }
-    return
-
-
-@app.cell
-def _():
-    # with open('status.json', 'w') as f2:
-    #     json.dump({
-    #         "dataset1":{
-    #             "table1": "loaded",
-    #             "table2": "error",
-    #             "table3": "not loaded"
-    #         },
-    #         "dataset2":{
-    #             "table1": "loaded",
-    #             "table2": "loaded",
-    #             "table3": "not loaded"
-    #         }
-    #     }, f2)
-    return
-
-
-@app.cell
-def _():
-    # table = mo.ui.radio(options=[name for name in steps])
-    # mo.sidebar(table)
-    return
-
-
-@app.cell
-def _(mo):
-    mo.sidebar(
-        mo.nav_menu({
-            '/?dataset=openaire': 'OpenAIRE',
-            '/?dataset=openalex': 'OpenAlex'
-        }, orientation='vertical')
-    )
-    return
-
-
-@app.cell
-def _(mo):
-    m = mo.query_params()
-    m
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _():
     return
 
 
