@@ -54,7 +54,7 @@ def _(os, subprocess):
         path = os.path.join('build/queries', datalake, dataset, query_set)
         for f in sorted(os.listdir(path)):
             query_path = os.path.join(path, f)
-            print(f'running query {query_path}')
+            print(f'running query "{query_path}"')
             subprocess.run(['uvx', 'duckdb', '-f', query_path])
     return (run_queries,)
 
@@ -159,6 +159,7 @@ def _(load_query_templates):
 @app.cell
 def _(subprocess):
     def download_dataset(dataset):
+        print(f'downloading dataset "{dataset}"')
         subprocess.run(f'./sources/{dataset}/download.sh', shell=True)
     return (download_dataset,)
 
