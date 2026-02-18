@@ -7,12 +7,20 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     import marimo as mo
-    import duckdb
     import json
     import os
+    import argparse
     import subprocess
     import shutil
-    return json, mo, os, shutil, subprocess
+    return argparse, json, mo, os, shutil, subprocess
+
+
+@app.cell
+def _(argparse):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-dataset')
+    args = parser.parse_args()
+    return (args,)
 
 
 @app.cell
@@ -44,9 +52,10 @@ def _(os, shutil):
 def _(os, subprocess):
     def run_queries(datalake, dataset, query_set):
         path = os.path.join('build/queries', datalake, dataset, query_set)
-        # subprocess.run(['ls', path])
         for f in sorted(os.listdir(path)):
-            subprocess.run(['duckdb', '-f', os.path.join(path, f)])
+            query_path = os.path.join(path, f)
+            print(f'running query {query_path}')
+            subprocess.run(['uvx', 'duckdb', '-f', query_path])
     return (run_queries,)
 
 
@@ -162,26 +171,29 @@ def _(json):
 
 
 @app.cell
-def _(config, generate_init_queries, run_queries, write_queries):
-    init_query = generate_init_queries(config)
-    write_queries(init_query, config['datalake'], 'general', 'init')
-    run_queries(config['datalake'], 'general', 'init')
-    return
-
-
-@app.cell
 def _(mo, os):
     sources = os.listdir('sources')
     dataset_selection = mo.ui.dropdown(options=sources).form(submit_button_label="Run")
     dataset_selection
-    return (dataset_selection,)
+    return dataset_selection, sources
 
 
 @app.cell
-def _(dataset_selection, mo):
-    dataset = dataset_selection.value
-    mo.stop(dataset is None, 'Select a dataset first')
+def _(args, dataset_selection, mo, sources):
+    dataset = args.dataset or dataset_selection.value
+    if dataset not in sources:
+        print(f'Select one of the following dataset: {sources}')
+        mo.stop(True)
     return (dataset,)
+
+
+@app.cell
+def _(config, dataset, generate_init_queries, run_queries, write_queries):
+    dataset
+    init_query = generate_init_queries(config)
+    write_queries(init_query, config['datalake'], 'general', 'init')
+    run_queries(config['datalake'], 'general', 'init')
+    return
 
 
 @app.cell
@@ -199,19 +211,9 @@ def _(config, dataset, generate_schema_queries, run_queries, write_queries):
 
 
 @app.cell
-def _(config, dataset, generate_load_queries):
+def _(config, dataset, generate_load_queries, run_queries, write_queries):
     load_queries = generate_load_queries(config, dataset)
-    return (load_queries,)
-
-
-@app.cell
-def _(config, dataset, load_queries, write_queries):
     write_queries(load_queries, config['datalake'], dataset, 'loading')
-    return
-
-
-@app.cell
-def _(config, dataset, run_queries):
     run_queries(config['datalake'], dataset, 'loading')
     return
 
