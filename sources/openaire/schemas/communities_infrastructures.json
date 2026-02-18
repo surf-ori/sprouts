@@ -1,9 +1,0 @@
-{
-  "acronym": "VARCHAR",
-  "description": "VARCHAR",
-  "id": "VARCHAR",
-  "name": "VARCHAR",
-  "type": "VARCHAR",
-  "subjects": "VARCHAR[]",
-  "zenodoCommunity": "VARCHAR"
-}

@@ -1,17 +1,12 @@
-.shell mkdir -p sources/{dataset}/schemas/
+.shell mkdir -p build/schemas/{dataset}
 
 .mode jsonl
-.once sources/{dataset}/schemas/{table}_.json
--- PIVOT (
-    SELECT column_name, column_type
-    FROM (
-        DESCRIBE
-        FROM read_{format}('{rawdatapath}/{dataset}/{tablepath}')
-    );
--- )
--- ON column_name
--- USING first(column_type);
+.once build/schemas/{dataset}/{table}_.json
+SELECT column_name, column_type
+FROM (
+    DESCRIBE
+    FROM read_{format}('{rawdatapath}/{dataset}/{tablepath}')
+);
 
--- .shell <sources/{dataset}/schemas/{table}_.json jq >sources/{dataset}/schemas/{table}.json
-.shell <sources/{dataset}/schemas/{table}_.json jq -s '[.[] | {{(.column_name): .column_type}}] | add' >sources/{dataset}/schemas/{table}.json
-.shell rm sources/{dataset}/schemas/{table}_.json
+.shell <build/schemas/{dataset}/{table}_.json jq -s '[.[] | {{(.column_name): .column_type}}] | add' >build/schemas/{dataset}/{table}.json
+.shell rm build/schemas/{dataset}/{table}_.json

@@ -131,7 +131,7 @@ def _(json, load_query_templates):
             queries.append({'name': f'extract-schema_({table})', 'string': query})
 
         return queries
-    return
+    return (generate_schema_queries,)
 
 
 @app.cell
@@ -172,7 +172,7 @@ def _(config, generate_init_queries, run_queries, write_queries):
 @app.cell
 def _(mo, os):
     sources = os.listdir('sources')
-    dataset_selection = mo.ui.dropdown(options=sources)
+    dataset_selection = mo.ui.dropdown(options=sources).form(submit_button_label="Run")
     dataset_selection
     return (dataset_selection,)
 
@@ -191,22 +191,22 @@ def _(dataset, download_dataset):
 
 
 @app.cell
-def _():
-    # schema_queries = generate_schema_queries(config, dataset)
-    # write_queries(schema_queries, config['datalake'], dataset, 'schema-extraction')
-    # run_queries(config['datalake'], dataset, 'schema-extraction')
+def _(config, dataset, generate_schema_queries, run_queries, write_queries):
+    schema_queries = generate_schema_queries(config, dataset)
+    write_queries(schema_queries, config['datalake'], dataset, 'schema-extraction')
+    run_queries(config['datalake'], dataset, 'schema-extraction')
     return
 
 
 @app.cell
 def _(config, dataset, generate_load_queries):
-    loading = generate_load_queries(config, dataset)
-    return (loading,)
+    load_queries = generate_load_queries(config, dataset)
+    return (load_queries,)
 
 
 @app.cell
-def _(config, dataset, loading, write_queries):
-    write_queries(loading, config['datalake'], dataset, 'loading')
+def _(config, dataset, load_queries, write_queries):
+    write_queries(load_queries, config['datalake'], dataset, 'loading')
     return
 
 
