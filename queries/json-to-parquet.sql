@@ -1,4 +1,4 @@
--- .shell mkdir -p {datapath}/{dataset}/{table}
+.shell mkdir -p {datapath}/{dataset}/{table}
 
 COPY (
      FROM read_json('{rawdatapath}/{dataset}/{tablepath}', columns = {tableschema})

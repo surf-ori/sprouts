@@ -4,6 +4,6 @@
     "datalake": "sprouts",
     "raw-data-path": "build/raw-data",
     "data-path": "build/data",
-    "catalog-path": "build/.",
+    "catalog-path": "build",
     "log-path": "build/logs"
 }

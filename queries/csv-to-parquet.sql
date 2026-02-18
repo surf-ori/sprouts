@@ -1,4 +1,4 @@
--- .shell mkdir -p {datapath}/{dataset}/{table}
+.shell mkdir -p {datapath}/{dataset}/{table}
 
 COPY (
      FROM read_csv('{rawdatapath}/{dataset}/{tablepath}', header=true, columns = {tableschema})
