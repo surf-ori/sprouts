@@ -12,13 +12,15 @@ def _():
     import argparse
     import subprocess
     import shutil
-    return argparse, json, mo, os, shutil, subprocess
+    from joblib import Parallel, delayed
+    return Parallel, argparse, delayed, json, mo, os, shutil, subprocess
 
 
 @app.cell
 def _(argparse):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-dataset')
+    parser.add_argument('datasets', nargs='*')
+    parser.add_argument('--new-ducklake', action="store_true")
     args = parser.parse_args()
     return (args,)
 
@@ -172,50 +174,91 @@ def _(json):
 
 
 @app.cell
+def _(mo):
+    new_ducklake_selection = mo.ui.radio(options={'reuse DuckLake catalog': False, 'new DuckLake catalog': True}).form(submit_button_label='Save')
+    new_ducklake_selection
+    return (new_ducklake_selection,)
+
+
+@app.cell
+def _(
+    args,
+    config,
+    generate_init_queries,
+    new_ducklake_selection,
+    run_queries,
+    write_queries,
+):
+    new_ducklake = new_ducklake_selection.value or args.new_ducklake
+    if new_ducklake:
+        init_query = generate_init_queries(config)
+        write_queries(init_query, config['datalake'], 'general', 'init')
+        run_queries(config['datalake'], 'general', 'init')
+        print('created new Ducklake catalog')
+    else:
+        print('reusing existing Ducklake catalog')
+    return
+
+
+@app.cell
 def _(mo, os):
     sources = os.listdir('sources')
-    dataset_selection = mo.ui.dropdown(options=sources).form(submit_button_label="Run")
-    dataset_selection
-    return dataset_selection, sources
+    download_selection = mo.ui.multiselect(options=sources).form(submit_button_label="Download")
+    download_selection
+    return download_selection, sources
 
 
 @app.cell
-def _(args, dataset_selection, mo, sources):
-    dataset = args.dataset or dataset_selection.value
-    if dataset not in sources:
-        print(f'Select one of the following dataset: {sources}')
+def _(Parallel, delayed, download_dataset, download_selection):
+    _ = Parallel(n_jobs=4)(delayed(download_dataset)(d) for d in download_selection.value)
+    return
+
+
+@app.cell
+def _(mo, sources):
+    extract_selection = mo.ui.multiselect(options=sources).form(submit_button_label="Extract schema")
+    extract_selection
+    return (extract_selection,)
+
+
+@app.cell
+def _(
+    config,
+    extract_selection,
+    generate_schema_queries,
+    run_queries,
+    write_queries,
+):
+    for extract_dataset in extract_selection.value:
+        schema_queries = generate_schema_queries(config, extract_dataset)
+        write_queries(schema_queries, config['datalake'], extract_dataset, 'schema-extraction')
+        run_queries(config['datalake'], extract_dataset, 'schema-extraction')
+    return
+
+
+@app.cell
+def _(mo, sources):
+    load_selection = mo.ui.multiselect(options=sources).form(submit_button_label="Load")
+    load_selection
+    return (load_selection,)
+
+
+@app.cell
+def _(args, load_selection, mo, sources):
+    datasets = args.datasets or load_selection.value
+    unknown_datasets = [dataset for dataset in datasets if dataset not in sources]
+    if unknown_datasets:
+        print(f'Do no know {unknown_datasets}. Select one of the following dataset: {sources}')
         mo.stop(True)
-    return (dataset,)
+    return (datasets,)
 
 
 @app.cell
-def _(config, dataset, generate_init_queries, run_queries, write_queries):
-    dataset
-    init_query = generate_init_queries(config)
-    write_queries(init_query, config['datalake'], 'general', 'init')
-    run_queries(config['datalake'], 'general', 'init')
-    return
-
-
-@app.cell
-def _(dataset, download_dataset):
-    download_dataset(dataset)
-    return
-
-
-@app.cell
-def _(config, dataset, generate_schema_queries, run_queries, write_queries):
-    schema_queries = generate_schema_queries(config, dataset)
-    write_queries(schema_queries, config['datalake'], dataset, 'schema-extraction')
-    run_queries(config['datalake'], dataset, 'schema-extraction')
-    return
-
-
-@app.cell
-def _(config, dataset, generate_load_queries, run_queries, write_queries):
-    load_queries = generate_load_queries(config, dataset)
-    write_queries(load_queries, config['datalake'], dataset, 'loading')
-    run_queries(config['datalake'], dataset, 'loading')
+def _(config, datasets, generate_load_queries, run_queries, write_queries):
+    for dataset in datasets:
+        load_queries = generate_load_queries(config, dataset)
+        write_queries(load_queries, config['datalake'], dataset, 'loading')
+        run_queries(config['datalake'], dataset, 'loading')
     return
 
 
