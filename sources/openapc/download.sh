@@ -1,4 +1,4 @@
-source ./setup.sh openapc
+source ./setup.sh download openapc
 
 files="\
 https://github.com/OpenAPC/openapc-de/raw/refs/tags/v4.167.1-0-1/data/apc_de.csv \

@@ -1,4 +1,3 @@
-raw_data_path=$(jq -r '."raw-data-path"' < ../config.json)/openalex/
-log_file=$(jq -r '."log-path"' < ../config.json)/openalex/download/$(date -Iseconds -u).txt
+source ./setup.sh download openalex
 
-aws s3 cp s3://openalex/data $raw_data_path --recursive --no-sign-request --region us-east-1 --no-progress >> $log_file
+>> $log_file aws s3 cp s3://openalex/data /Users/bey00001/dev/sprouts/build/raw-data/openalex --recursive --no-sign-request --region us-east-1

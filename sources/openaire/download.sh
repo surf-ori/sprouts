@@ -1,8 +1,4 @@
-source ./setup.sh openaire
-
-function zenodo_filelist {
-    curl https://zenodo.org/api/deposit/depositions/${1}/files | jq -r '.[].links.download'
-}
+source ./setup.sh download openaire
 
 for file in $(zenodo_filelist 17725827)
     do echo $file >> $log_file
