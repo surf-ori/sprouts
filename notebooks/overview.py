@@ -1,6 +1,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
+#     "altair==6.0.0",
 #     "duckdb==1.4.4",
 #     "marimo>=0.20.2",
 #     "polars[pyarrow]==1.38.1",
@@ -13,6 +14,24 @@ import marimo
 
 __generated_with = "0.20.2"
 app = marimo.App(width="medium")
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # SURF | Open Research Information | Datasets Overview
+
+    Similar to the [ORION initiative](https://orion-dbs.community/), we want to create an overview of available and actively queryable Open Research Information Resources / Datasets.
+
+    In our approach we want to stay away from BigTech. We currently curate the quaryable databases ourselves, but welcome others to share their data-catalogues. We use the DuckLake cataloge from DuckDB, and store the actual data as parquet files on an S3-compatibe Object store. This way we can keep costs low, by separating storage and compute.
+
+    Compute: When you want to query the databases, you attach the ducklake catalog, and you see all the available datasets. When you run an SQL query, a portion of the data ruequested by your query is transfered over HTTPS to your local machine where the SQL operations take place in your machine. The bigger the requested daa, the longer the data transfer. The biger your local machine, the faster your query operation completes. how big your machine is, that is up to you.
+
+    At SURF we also offer ready-made [services](https://www.surf.nl/en/services) for that SQL compute, where you can start working in. like a Marimo notebook in a virtual machine on SURF Research Cloud, or a Superset dashboard on a Kubernetes cluster.
+
+    Below you will see the ORI data resources we currently curate.
+    """)
+    return
 
 
 @app.cell
@@ -55,6 +74,22 @@ def _(mo):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## ORI data catalog
+
+    This URL gives you access to the ORI data catalog.
+
+    This catalog lists all the ORI data resoures, their tables and columns. also it holds infomration about the changes in time of all the data resources, like  deleted, updated and added records, and schema changes.
+
+    This alows you to 'time-travel' in the data, and not only use the last state. For example detecting when an article flips from open access to closed access.
+
+    Use this URL to attach it as a ducklake to your query engine.
+    """)
+    return
+
+
 @app.cell
 def _(mo):
     url = mo.ui.text_area(value='https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:boto3bucket/sprouts_http.ducklake')
@@ -66,6 +101,16 @@ def _(mo):
 @app.cell
 def _(url):
     url.value
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## ORI data statistics
+
+    This table below shows you some quick statistics on the volume of the ORI datasets and their tables. For each table this can be the number of records, number of columns, total table size in bytes, etc.
+    """)
     return
 
 
@@ -93,7 +138,7 @@ def _(mo, url):
 
 @app.cell
 def _(mo):
-    _df = mo.sql(
+    quick_statistics = mo.sql(
         f"""
         SELECT table_name, record_count
             FROM __ducklake_metadata_sprouts.ducklake_table_stats
@@ -101,6 +146,12 @@ def _(mo):
         	USING (table_id)
         """
     )
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    ## ORI data resources
     return
 
 
@@ -114,6 +165,12 @@ def _(mo):
         output=False
     )
     return (datasets,)
+
+
+@app.cell(hide_code=True)
+def _():
+    ## ORI tables
+    return
 
 
 @app.cell
@@ -133,6 +190,12 @@ def _(mo):
     return (tables,)
 
 
+@app.cell(hide_code=True)
+def _():
+    ## ORI columns
+    return
+
+
 @app.cell
 def _(mo):
     columns = mo.sql(
@@ -145,6 +208,14 @@ def _(mo):
         output=False
     )
     return (columns,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## ORI datasets, tables, columns
+    """)
+    return
 
 
 @app.cell
@@ -169,20 +240,30 @@ def _(datasets, mo):
 
 @app.cell
 def _(datasets, latest_columns, mo, pl, selector, tables):
-    # determine selected schema id
-    selected_schema_id = datasets.filter(pl.col('schema_name') == selector.value)[
-        'schema_id'
-    ][0]
+    # Determine the selected schema ID based on the user's selection
+    selected_schema_id = datasets.filter(pl.col('schema_name') == selector.value)['schema_id'][0]
 
+    # Filter tables that belong to the selected schema
     filtered_tables = tables.filter(pl.col('schema_id') == selected_schema_id)
+
+    # Initialize a dictionary to hold the accordion data
     accordion_data = {}
+
+    # Iterate over each table in the filtered tables
     for row in filtered_tables.to_dicts():
         table_id = row['table_id']
         table_name = row['table_name']
+
+        # Filter columns that belong to the current table
         cols = latest_columns.filter(pl.col('table_id') == table_id)
+
+        # Select relevant column details and convert to dictionaries
         records = cols.select(['column_name', 'column_type', 'value']).to_dicts()
+
+        # Create a marimo UI table for the current table's columns and add it to the accordion data
         accordion_data[table_name] = mo.ui.table(data=records)
 
+    # Display the accordion with the collected table data
     mo.accordion(accordion_data, lazy=True)
     return
 
