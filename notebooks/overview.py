@@ -54,7 +54,7 @@ def _(mo):
 
     In our approach we want to stay away from BigTech. We currently curate the quaryable databases ourselves, but welcome others to share their data-catalogues. We use the DuckLake cataloge from DuckDB, and store the actual data as parquet files on an S3-compatibe Object store. This way we can keep costs low, by separating storage and compute.
 
-    Compute: When you want to query the databases, you attach the ducklake catalog, and you see all the available datasets. When you run an SQL query, a portion of the data ruequested by your query is transfered over HTTPS to your local machine where the SQL operations take place in your machine. The bigger the requested daa, the longer the data transfer. The biger your local machine, the faster your query operation completes. how big your machine is, that is up to you.
+    Compute: You can [query the datasets from your browser, right now!](#link-to-html-page) When you want to query the databases, you attach the ducklake catalog, and you see all the available datasets. When you run an SQL query, a portion of the data requested by your query is transfered over HTTPS to your local machine where the SQL operations take place in your machine. The bigger the requested daa, the longer the data transfer. The biger your local machine, the faster your query operation completes. how big your machine is, that is up to you.
 
     At SURF we also offer ready-made [services](https://www.surf.nl/en/services) for that SQL compute, where you can start working in. like a Marimo notebook in a virtual machine on SURF Research Cloud, or a Superset dashboard on a Kubernetes cluster.
 
