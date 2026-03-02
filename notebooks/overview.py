@@ -18,10 +18,39 @@ app = marimo.App(width="medium")
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
-    # SURF | Open Research Information | Datasets Overview
+    mo.md("""
+    <div style="
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e5e5e5;
+        margin-bottom: 1rem;
+    ">
+        <div>
+            <h1 style="margin: 0;">
+                Open Research Information | Datasets Overview
+            </h1>
+            <div style="color: #666; font-size: 0.9rem;">
+                Overview of available and actively queryable ORI datasets.
+            </div>
+        </div>
+        <img
+            src="https://www.surf.nl/themes/surf/logo.svg"
+            alt="SURF logo"
+            style="height: 100px;"
+        />
+    </div>
+    """)
+    return
 
-    Similar to the [ORION initiative](https://orion-dbs.community/), we want to create an overview of available and actively queryable Open Research Information Resources / Datasets.
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    This dashboard is part of the [**PID to Portal project**](https://communities.surf.nl/en/open-research-information/article/from-pid-to-portal-strengthening-the-open-research-information) from SURF and UNL.
+
+    Our goals is to create an overview of available and actively queryable Open Research Information Resources / Datasets, that the ORI community can start using freely.
 
     In our approach we want to stay away from BigTech. We currently curate the quaryable databases ourselves, but welcome others to share their data-catalogues. We use the DuckLake cataloge from DuckDB, and store the actual data as parquet files on an S3-compatibe Object store. This way we can keep costs low, by separating storage and compute.
 
@@ -29,7 +58,7 @@ def _(mo):
 
     At SURF we also offer ready-made [services](https://www.surf.nl/en/services) for that SQL compute, where you can start working in. like a Marimo notebook in a virtual machine on SURF Research Cloud, or a Superset dashboard on a Kubernetes cluster.
 
-    Below you will see the ORI data resources we currently curate.
+    Below you will see the ORI data resources we currently curate. (This overview was inspired by the [ORION-DBS initiative](https://orion-dbs.community/).)
     """)
     return
 
