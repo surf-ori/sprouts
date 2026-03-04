@@ -24,13 +24,14 @@ async def _():
     # Install the packages when running in WAS
     await micropip.install(["polars"])
 
+    import requests
     import json
     import duckdb
     import polars as pl
     import altair as alt
     import numpy as np
 
-    return duckdb, json, mo, pl
+    return duckdb, json, mo, pl, requests
 
 
 @app.cell(hide_code=True)
@@ -63,46 +64,29 @@ def _(mo):
 
 
 @app.cell
-def _(datasets, mo, pl, quick_statistics, tables):
-    def _to_int(value):
-        return int(value) if value is not None else 0
-
-    def _format_gb(size_bytes):
-        return f"{size_bytes / (1024 ** 3):,.2f} GB"
-
-    datasets_count = datasets.height
-
-    total_records = _to_int(
-        quick_statistics.select(pl.col("record_count").fill_null(0).sum()).item()
+def _(datasets_count, mo, total_records, volume_bytes):
+    datasets_stat = mo.stat(
+        value=f"{datasets_count:,}",
+        label="Datasets",
+        caption="Number of datasets",
+        direction="none"
     )
 
-    volume_bytes = _to_int(
-                tables.select(pl.col("file_size_bytes").fill_null(0).sum()).item()
-            )
-
-    mo.md(
-        f"""
-        <div style="
-            display: grid;
-            grid-template-columns: repeat(3, minmax(180px, 1fr));
-            gap: 0.75rem;
-            margin: 0.5rem 0 1rem 0;
-        ">
-            <div style="border: 1px solid #e5e5e5; border-radius: 10px; padding: 0.9rem;">
-                <div style="font-size: 0.85rem; color: #666;">Datasets</div>
-                <div style="font-size: 1.5rem; font-weight: 700;">{datasets_count:,}</div>
-            </div>
-            <div style="border: 1px solid #e5e5e5; border-radius: 10px; padding: 0.9rem;">
-                <div style="font-size: 0.85rem; color: #666;">Total records</div>
-                <div style="font-size: 1.5rem; font-weight: 700;">{total_records:,}</div>
-            </div>
-            <div style="border: 1px solid #e5e5e5; border-radius: 10px; padding: 0.9rem;">
-                <div style="font-size: 0.85rem; color: #666;">Data volume</div>
-                <div style="font-size: 1.5rem; font-weight: 700;">{_format_gb(volume_bytes)}</div>
-            </div>
-        </div>
-        """
+    total_records_stat = mo.stat(
+        value=f"{total_records:,}",
+        label="Total records",
+        caption="Total number of records across all datasets",
+        direction="none"
     )
+
+    volume_bytes_stat = mo.stat(
+        value=_format_gb(volume_bytes),
+        label="Data volume",
+        caption="Total data volume in GB",
+        direction="none"
+    )
+
+    mo.hstack([datasets_stat, total_records_stat, volume_bytes_stat], justify="center", gap="2rem")
     return
 
 
@@ -143,9 +127,9 @@ def _(mo):
 
 
 @app.cell
-def _(json):
-    with open('./config.json') as f:
-        config = json.load(f)
+def _(json, requests):
+    response = requests.get('https://raw.githubusercontent.com/surf-ori/sprouts/refs/heads/notebooks/config.json')
+    config = json.loads(response.text)
     return
 
 
