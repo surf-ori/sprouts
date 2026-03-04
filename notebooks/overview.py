@@ -17,6 +17,22 @@ __generated_with = "0.20.4"
 app = marimo.App(width="medium")
 
 
+@app.cell
+async def _():
+    import marimo as mo
+    import micropip
+    # Install the packages when running in WAS
+    await micropip.install(["polars"])
+
+    import json
+    import duckdb
+    import polars as pl
+    import altair as alt
+    import numpy as np
+
+    return duckdb, json, mo, pl
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
@@ -47,8 +63,46 @@ def _(mo):
 
 
 @app.cell
-def _():
-    # TODO: statistics cards on number of datasets, number of total records, volume of data in GB
+def _(datasets, mo, pl, quick_statistics, tables):
+    def _to_int(value):
+        return int(value) if value is not None else 0
+
+    def _format_gb(size_bytes):
+        return f"{size_bytes / (1024 ** 3):,.2f} GB"
+
+    datasets_count = datasets.height
+
+    total_records = _to_int(
+        quick_statistics.select(pl.col("record_count").fill_null(0).sum()).item()
+    )
+
+    volume_bytes = _to_int(
+                tables.select(pl.col("file_size_bytes").fill_null(0).sum()).item()
+            )
+
+    mo.md(
+        f"""
+        <div style="
+            display: grid;
+            grid-template-columns: repeat(3, minmax(180px, 1fr));
+            gap: 0.75rem;
+            margin: 0.5rem 0 1rem 0;
+        ">
+            <div style="border: 1px solid #e5e5e5; border-radius: 10px; padding: 0.9rem;">
+                <div style="font-size: 0.85rem; color: #666;">Datasets</div>
+                <div style="font-size: 1.5rem; font-weight: 700;">{datasets_count:,}</div>
+            </div>
+            <div style="border: 1px solid #e5e5e5; border-radius: 10px; padding: 0.9rem;">
+                <div style="font-size: 0.85rem; color: #666;">Total records</div>
+                <div style="font-size: 1.5rem; font-weight: 700;">{total_records:,}</div>
+            </div>
+            <div style="border: 1px solid #e5e5e5; border-radius: 10px; padding: 0.9rem;">
+                <div style="font-size: 0.85rem; color: #666;">Data volume</div>
+                <div style="font-size: 1.5rem; font-weight: 700;">{_format_gb(volume_bytes)}</div>
+            </div>
+        </div>
+        """
+    )
     return
 
 
@@ -86,18 +140,6 @@ def _(mo):
         )
     )
     return
-
-
-@app.cell
-def _():
-    import marimo as mo
-    import json
-    import duckdb
-    import polars as pl
-    import altair as alt
-    import numpy as np
-
-    return duckdb, json, mo, pl
 
 
 @app.cell
@@ -180,7 +222,7 @@ def _(mo, url):
 def _(mo):
     quick_statistics = mo.sql(
         f"""
-        SELECT table_name, record_count
+        SELECT table_name, record_count, file_size_bytes
             FROM __ducklake_metadata_sprouts.ducklake_table_stats
             FULL JOIN __ducklake_metadata_sprouts.ducklake_table
         	USING (table_id)
