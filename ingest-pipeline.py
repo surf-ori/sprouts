@@ -117,14 +117,15 @@ def _(json, load_query_templates):
             query = templates['comment-on-table'].format(datapath=config["data-path"],
                                                          dataset=dataset,
                                                          table=table,
-                                                         description=table_props['description'])
+                                                         description=table_props['description'].replace("'", "''")
+                                                        )
 
             for column, description in table_props['column-descriptions'].items():
                 query += '\n' + templates['comment-on-column'].format(datapath=config["data-path"],
                                                                       dataset=dataset,
                                                                       table=table,
                                                                       column=column,
-                                                                      description=description
+                                                                      description=description.replace("'", "''")
                                                                      )
 
             queries.append({'name': f'add-comments_({table})', 'string': attach_query + query + detach_query})
