@@ -268,7 +268,15 @@ def _(datasets, mo):
 
 
 @app.cell
+def _():
+    # add information about the selected dataset, at least the date_Created and date_lastUpdated
+    return
+
+
+@app.cell
 def _(datasets, latest_columns, mo, pl, selector, tables):
+    # For the selected dataset show the tables as accordeons and within each accordion show the list of colums, their types and a description
+
     # Determine the selected schema ID based on the user's selection
     selected_schema_id = datasets.filter(pl.col('schema_name') == selector.value)['schema_id'][0]
 
