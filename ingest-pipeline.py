@@ -180,7 +180,7 @@ def _(subprocess):
         print(f'downloading dataset "{dataset}"', end='')
         # log_file = get_log_file(dataset, 'download')
         # with open(log_file, 'wb') as f:
-        exit_code = subprocess.run(f'./sources/{dataset}/download.sh', shell=True)#, stdout=f, stderr=f)
+        exit_code = subprocess.run(f'./sources/{dataset}/download.sh', shell=True, executable='/bin/bash')#, stdout=f, stderr=f)
         print('❌' if exit_code.returncode > 0 else '✔️')
 
     return (download_dataset,)
@@ -332,17 +332,42 @@ def _(config, datasets, generate_load_queries, run_queries, write_queries):
 def _(config, mo):
     if config['objectstore-key'] and config['objectstore-secret']:
         remote_catalog_path = mo.ui.dictionary({
-            'bucket': mo.ui.text(value='sprouts-demo'),
+            'bucket': mo.ui.text(value='sprouts'),
             'key': mo.ui.text(value='catalog.ducklake')
         }).form(submit_button_label='Upload')
     else:
         remote_catalog_path = mo.md('')
+    
     remote_catalog_path
     return (remote_catalog_path,)
 
 
 @app.cell
-def _(boto3, catalog_file, config, remote_catalog_path):
+def _(datetime, remote_catalog_path):
+    frozen_catalog = f'{str(datetime.datetime.now()).replace(' ', 'T')}-{remote_catalog_path.value['key']}'
+    frozen_catalog
+    return (frozen_catalog,)
+
+
+@app.cell(hide_code=True)
+def _(catalog_file, database, frozen_catalog, mo):
+    _df = mo.sql(
+        f"""
+        ATTACH '{catalog_file}' as ducklake;
+        ATTACH '{frozen_catalog}' as frozen_ducklake;
+        COPY FROM DATABASE ducklake TO frozen_ducklake;
+        UPDATE frozen_ducklake.ducklake_metadata
+        SET value = replace(value, 's3://', 'https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:')
+        WHERE key = 'data_path';
+        DETACH ducklake;
+        DETACH frozen_ducklake;
+        """
+    )
+    return
+
+
+@app.cell
+def _(boto3, config, frozen_catalog, remote_catalog_path):
     client = boto3.client('s3',
                             'default',
                             endpoint_url='https://objectstore.surf.nl',
@@ -350,7 +375,7 @@ def _(boto3, catalog_file, config, remote_catalog_path):
                             aws_secret_access_key=config['objectstore-secret']
                            )
 
-    with open(catalog_file, 'rb') as file_data:
+    with open(frozen_catalog, 'rb') as file_data:
         res = client.upload_fileobj(file_data,
                                     remote_catalog_path.value['bucket'],
                                     remote_catalog_path.value['key'])
