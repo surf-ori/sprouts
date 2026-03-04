@@ -22,7 +22,7 @@ async def _():
     import marimo as mo
     import micropip
     # Install the packages when running in WAS
-    await micropip.install(["polars"])
+    await micropip.install(["polars","duckdb"])
 
     import requests
     import json
@@ -63,39 +63,12 @@ def _(mo):
     return
 
 
-@app.cell
-def _(datasets_count, mo, total_records, volume_bytes):
-    datasets_stat = mo.stat(
-        value=f"{datasets_count:,}",
-        label="Datasets",
-        caption="Number of datasets",
-        direction="none"
-    )
-
-    total_records_stat = mo.stat(
-        value=f"{total_records:,}",
-        label="Total records",
-        caption="Total number of records across all datasets",
-        direction="none"
-    )
-
-    volume_bytes_stat = mo.stat(
-        value=_format_gb(volume_bytes),
-        label="Data volume",
-        caption="Total data volume in GB",
-        direction="none"
-    )
-
-    mo.hstack([datasets_stat, total_records_stat, volume_bytes_stat], justify="center", gap="2rem")
-    return
-
-
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     This dashboard is part of the [**PID to Portal project**](https://communities.surf.nl/en/open-research-information/article/from-pid-to-portal-strengthening-the-open-research-information) from SURF and UNL.
 
-    Our goals is to create an overview of available and actively queryable Open Research Information Resources / Datasets, that the ORI community can start using freely.
+    Our goals is to create an overview of available and actively queryable Open Research Information Resources / Datasets, that the ORI community can start using freely. [Code available.](https://github.com/surf-ori/sprouts/)
     """)
     return
 
@@ -193,7 +166,7 @@ def _(mo):
 
 @app.cell
 def _(mo, url):
-    _df = mo.sql(
+    sprouts_df = mo.sql(
         f"""
         ATTACH 'ducklake:{url.value}' as sprouts;
         USE sprouts;
@@ -214,6 +187,48 @@ def _(mo):
         output=False
     )
     return (quick_statistics,)
+
+
+@app.cell
+def _(datasets, mo, pl, quick_statistics, tables):
+    # Summary Statistics of ORI Datasets
+
+    def _to_int(value):
+            return int(value) if value is not None else 0
+
+    def _format_gb(size_bytes):
+            return f"{size_bytes / (1024 ** 3):,.2f} GB"
+
+    datasets_count = datasets.height
+
+    total_records = _to_int(quick_statistics.select(pl.col("record_count").fill_null(0).sum()).item())
+
+    volume_bytes = _to_int(tables.select(pl.col("file_size_bytes").fill_null(0).sum()).item())
+
+
+    datasets_stat = mo.stat(
+        value=f"{datasets_count:,}",
+        label="Datasets",
+        caption="Number of datasets",
+        bordered=True
+    )
+
+    total_records_stat = mo.stat(
+        value=f"{total_records:,}",
+        label="Total records",
+        caption="Total number of records across all datasets",
+        bordered=True
+    )
+
+    volume_bytes_stat = mo.stat(
+        value=_format_gb(volume_bytes),
+        label="Data volume",
+        caption="Total data volume in GB",
+        bordered=True
+    )
+
+    mo.hstack([datasets_stat, total_records_stat, volume_bytes_stat], widths="equal", align="center")
+    return
 
 
 @app.cell(hide_code=True)
@@ -368,6 +383,14 @@ def _(mo):
     editor = mo.ui.code_editor(value=initial_code, language="sql").form(submit_button_label="Run")
     editor
     return (editor,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    _Run this cell to see a table below._
+    """)
+    return
 
 
 @app.cell
