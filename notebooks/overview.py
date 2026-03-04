@@ -4,6 +4,7 @@
 #     "altair==6.0.0",
 #     "duckdb==1.4.4",
 #     "marimo>=0.20.2",
+#     "numpy==2.4.2",
 #     "polars[pyarrow]==1.38.1",
 #     "pydantic-ai==1.63.0",
 #     "sqlglot==29.0.1",
@@ -45,21 +46,45 @@ def _(mo):
     return
 
 
+@app.cell
+def _():
+    # TODO: statistics cards on number of datasets, number of total records, volume of data in GB
+    return
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     This dashboard is part of the [**PID to Portal project**](https://communities.surf.nl/en/open-research-information/article/from-pid-to-portal-strengthening-the-open-research-information) from SURF and UNL.
 
     Our goals is to create an overview of available and actively queryable Open Research Information Resources / Datasets, that the ORI community can start using freely.
-
-    In our approach we want to stay away from BigTech. We currently curate the quaryable databases ourselves, but welcome others to share their data-catalogues. We use the DuckLake cataloge from DuckDB, and store the actual data as parquet files on an S3-compatibe Object store. This way we can keep costs low, by separating storage and compute.
-
-    Compute: You can [query the datasets from your browser, right now!](#link-to-html-page) When you want to query the databases, you attach the ducklake catalog, and you see all the available datasets. When you run an SQL query, a portion of the data requested by your query is transfered over HTTPS to your local machine where the SQL operations take place in your machine. The bigger the requested daa, the longer the data transfer. The biger your local machine, the faster your query operation completes. how big your machine is, that is up to you.
-
-    At SURF we also offer ready-made [services](https://www.surf.nl/en/services) for that SQL compute, where you can start working in. like a Marimo notebook in a virtual machine on SURF Research Cloud, or a Superset dashboard on a Kubernetes cluster.
-
-    Below you will see the ORI data resources we currently curate. (This overview was inspired by the [ORION-DBS initiative](https://orion-dbs.community/).)
     """)
+    return
+
+
+@app.cell
+def _(mo):
+    background = mo.md("""
+    In our approach, we aim to avoid BigTech. We curate the queryable databases ourselves but welcome others to share their data catalogs. We utilize the DuckLake catalog from DuckDB and store the actual data as Parquet files on an S3-compatible object store. This separation of storage and compute helps us keep costs low.
+
+    This catalog lists all the ORI data resoures, their tables and columns. also it holds information about the changes in time of all the data resources, like  deleted, updated and added records, and schema changes.
+
+    This alows you to 'time-travel' in the data, and not only use the last state. For example detecting when an article flips from open access to closed access.
+
+    **Compute:** You can query the datasets directly from your browser (no login required)! When you query the databases, a portion of the requested data is transferred over HTTPS to your local machine where the SQL operations are performed. Larger data requests result in longer transfer times, and the speed of your local machine affects the query completion time. The size of your machine is up to you.
+
+    At SURF, we also provide ready-made [services](https://www.surf.nl/en/services) for SQL computation, such as a Marimo notebook in a virtual machine on SURF Research Cloud or a Superset dashboard on a Kubernetes cluster.
+
+    Below, you will see the ORI data resources we currently curate. (This overview was inspired by the [ORION-DBS initiative](https://orion-dbs.community/).)
+
+    We want to add the following datasets: OpenAIRE, OpenALEX, OpenAPC, ROR, Harvest metadata from CRISes, Harvest metdata from Repositories, Crossref, SURF Journal Catalogue, CWTS Leiden Ranking, ORCID, DOAJ, DOAB, OpenCitations, DataCite, PKP beacon.
+    """)
+    mo.sidebar(
+        mo.accordion(
+            {"Background": background},
+            lazy=True,
+        )
+    )
     return
 
 
@@ -69,6 +94,8 @@ def _():
     import json
     import duckdb
     import polars as pl
+    import altair as alt
+    import numpy as np
 
     return duckdb, json, mo, pl
 
@@ -108,13 +135,7 @@ def _(mo):
     mo.md(r"""
     ## ORI data catalog
 
-    This URL gives you access to the ORI data catalog.
-
-    This catalog lists all the ORI data resoures, their tables and columns. also it holds infomration about the changes in time of all the data resources, like  deleted, updated and added records, and schema changes.
-
-    This alows you to 'time-travel' in the data, and not only use the last state. For example detecting when an article flips from open access to closed access.
-
-    Use this URL to attach it as a ducklake to your query engine.
+    This URL gives you access to the ORI data catalog. Copy this URL to attach it as a ducklake to your own query engine.
     """)
     return
 
@@ -127,19 +148,9 @@ def _(mo):
     return (url,)
 
 
-@app.cell
+@app.cell(disabled=True)
 def _(url):
     url.value
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ## ORI data statistics
-
-    This table below shows you some quick statistics on the volume of the ORI datasets and their tables. For each table this can be the number of records, number of columns, total table size in bytes, etc.
-    """)
     return
 
 
@@ -173,9 +184,10 @@ def _(mo):
             FROM __ducklake_metadata_sprouts.ducklake_table_stats
             FULL JOIN __ducklake_metadata_sprouts.ducklake_table
         	USING (table_id)
-        """
+        """,
+        output=False
     )
-    return
+    return (quick_statistics,)
 
 
 @app.cell(hide_code=True)
@@ -269,12 +281,14 @@ def _(datasets, mo):
 
 @app.cell
 def _():
-    # add information about the selected dataset, at least the date_Created and date_lastUpdated
+    # TODO: add information about the selected dataset, at least the date_Created and date_lastUpdated, Also the description, and the link to the orginal source, and the licence
+
+    "Description, dateCreated, dateLastUpdated, link to source, Licence"
     return
 
 
 @app.cell
-def _(datasets, latest_columns, mo, pl, selector, tables):
+def _(datasets, latest_columns, mo, pl, quick_statistics, selector, tables):
     # For the selected dataset show the tables as accordeons and within each accordion show the list of colums, their types and a description
 
     # Determine the selected schema ID based on the user's selection
@@ -290,6 +304,7 @@ def _(datasets, latest_columns, mo, pl, selector, tables):
     for row in filtered_tables.to_dicts():
         table_id = row['table_id']
         table_name = row['table_name']
+        record_count = quick_statistics.filter(pl.col('table_name') == table_name).to_dict()['record_count'][0]
 
         # Filter columns that belong to the current table
         cols = latest_columns.filter(pl.col('table_id') == table_id)
@@ -298,7 +313,7 @@ def _(datasets, latest_columns, mo, pl, selector, tables):
         records = cols.select(['column_name', 'column_type', 'value']).to_dicts()
 
         # Create a marimo UI table for the current table's columns and add it to the accordion data
-        accordion_data[table_name] = mo.ui.table(data=records)
+        accordion_data[f'{table_name} ({record_count} records)'] = mo.ui.table(data=records)
 
     # Display the accordion with the collected table data
     mo.accordion(accordion_data, lazy=True)
@@ -319,9 +334,9 @@ def _(mo):
 
 @app.cell
 def _(mo):
-    initial_code = """SELECT mainTitle 
-    FROM openaire.publications 
-    LIMIT 10
+    initial_code = """SELECT * 
+    FROM openapc.apc 
+    LIMIT 100
     """
 
     editor = mo.ui.code_editor(value=initial_code, language="sql").form(submit_button_label="Run")
