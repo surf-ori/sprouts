@@ -12,7 +12,7 @@
 
 import marimo
 
-__generated_with = "0.20.2"
+__generated_with = "0.20.4"
 app = marimo.App(width="medium")
 
 
@@ -70,7 +70,7 @@ def _():
     import duckdb
     import polars as pl
 
-    return json, mo, pl
+    return duckdb, json, mo, pl
 
 
 @app.cell
@@ -121,7 +121,7 @@ def _(mo):
 
 @app.cell
 def _(mo):
-    url = mo.ui.text_area(value='https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:boto3bucket/sprouts_http.ducklake')
+    url = mo.ui.text_area(value='https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts/catalog.ducklake')
     # url = mo.ui.text_area(value='https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:boto3bucket/sprouts.ducklake')
     url
     return (url,)
@@ -297,8 +297,33 @@ def _(datasets, latest_columns, mo, pl, selector, tables):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Query the datasets yourself
+
+    Below you can run queries yourself, use the table names and colums you see above, and start exploring the data live!
+
+    This of course will run in your browser. You have access to all the data, you are now not limited to you imagination, but the limitation now the CPU and RAM of your computer.
+    """)
+    return
+
+
 @app.cell
-def _():
+def _(mo):
+    initial_code = """SELECT mainTitle 
+    FROM openaire.publications 
+    LIMIT 10
+    """
+
+    editor = mo.ui.code_editor(value=initial_code, language="sql").form(submit_button_label="Run")
+    editor
+    return (editor,)
+
+
+@app.cell
+def _(duckdb, editor, mo):
+    mo.ui.table(duckdb.sql(editor.value))
     return
 
 
