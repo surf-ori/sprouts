@@ -1,3 +1,3 @@
 source ./setup.sh download openalex
 
-&>> $logfile aws s3 cp s3://openalex/data . --recursive --no-sign-request --region us-east-1
+>>$log_file 2>>$log_file aws s3 cp s3://openalex/data . --recursive --no-sign-request --region us-east-1

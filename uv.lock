@@ -1875,7 +1875,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "boto3", specifier = ">=1.42.40" },
+    { name = "boto3", specifier = ">=1.42.59" },
     { name = "duckdb", specifier = ">=1.4.3" },
     { name = "joblib", specifier = ">=1.5.3" },
     { name = "jupyter", specifier = ">=1.1.1" },
