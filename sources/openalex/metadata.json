@@ -2,6 +2,53 @@
     "name": "OpenAlex",
     "description": "OpenAlex is a fully open catalog of the global research system. It's named after the ancient Library of Alexandria and made by the nonprofit OurResearch.",
     "url": "https://openalex.org",
-    "tables": {}
-    
+    "tables": {
+        "authors": {
+            "description": "This is the original data set OpenAPC started with. It collects cost data on Article Processing Charges (APCs) on a per-publication basis. It consists of 18 metadata fields, with 5 of them being mandatory when contributing data.",
+            "raw-files": {
+                "path": "authors/*/*.gz",
+                "format": "json"
+            },
+            "schema": {
+                "id": "VARCHAR",
+                "display_name": "VARCHAR",
+                "display_name_alternatives": "VARCHAR[]",
+                "orcid": "VARCHAR",
+                "works_count": "BIGINT",
+                "cited_by_count": "BIGINT",
+                "summary_stats": "STRUCT(\"2yr_mean_citedness\" DOUBLE, h_index BIGINT, i10_index BIGINT)",
+                "ids": "STRUCT(openalex VARCHAR, orcid VARCHAR, scopus VARCHAR, twitter VARCHAR, wikipedia VARCHAR)",
+                "affiliations": "STRUCT(institution STRUCT(id VARCHAR, ror VARCHAR, display_name VARCHAR, country_code VARCHAR, \"type\" VARCHAR, lineage VARCHAR[]), \"years\" BIGINT[])[]",
+                "last_known_institutions": "STRUCT(id VARCHAR, ror VARCHAR, display_name VARCHAR, country_code VARCHAR, \"type\" VARCHAR, lineage VARCHAR[])[]",
+                "topics": "STRUCT(id VARCHAR, display_name VARCHAR, count BIGINT, score DOUBLE, subfield STRUCT(id VARCHAR, display_name VARCHAR), field STRUCT(id VARCHAR, display_name VARCHAR), \"domain\" STRUCT(id VARCHAR, display_name VARCHAR))[]",
+                "topic_share": "STRUCT(id VARCHAR, display_name VARCHAR, \"value\" DOUBLE, subfield STRUCT(id VARCHAR, display_name VARCHAR), field STRUCT(id VARCHAR, display_name VARCHAR), \"domain\" STRUCT(id VARCHAR, display_name VARCHAR))[]",
+                "x_concepts": "STRUCT(id VARCHAR, wikidata VARCHAR, display_name VARCHAR, \"level\" BIGINT, score DOUBLE, count BIGINT)[]",
+                "sources": "STRUCT(id VARCHAR, display_name VARCHAR, issn_l VARCHAR, issn VARCHAR[], is_oa BOOLEAN, is_in_doaj BOOLEAN, is_core BOOLEAN, host_organization VARCHAR, host_organization_name VARCHAR, host_organization_lineage VARCHAR[], host_organization_lineage_names VARCHAR[], \"type\" VARCHAR)[]",
+                "counts_by_year": "STRUCT(\"year\" BIGINT, works_count BIGINT, oa_works_count BIGINT, cited_by_count BIGINT)[]",
+                "works_api_url": "VARCHAR",
+                "updated_date": "DATE",
+                "created_date": "DATE"
+            },
+            "column-descriptions": {
+                "id": "The OpenAlex ID for this author.",
+                "display_name": "The name of the author as a single string.",
+                "display_name_alternatives": "Other ways that we've found this author's name displayed.",
+                "orcid": "The ORCID ID for this author. ORCID is a global and unique ID for authors. This is the Canonical external ID for authors.\nCompared to other Canonical IDs, ORCID coverage is relatively low in OpenAlex, because ORCID adoption in the wild has been slow compared with DOI, for example. This is particularly an issue when dealing with older works and authors.",
+                "works_count": "The number of 📄 Works this this author has created. This is updated a couple times per day. So the count may be slightly different than what's in works when viewed like [this](https://api.openalex.org/works?filter=author.id:A5023888391).",
+                "cited_by_count": "The total number 📄 Works that cite a work this author has created.",
+                "summary_stats": "Citation metrics for this author\n- 2yr_mean_citedness Float: The 2-year mean citedness for this source. Also known as impact factor. We use the year prior to the current year for the citations (the numerator) and the two years prior to that for the citation-receiving publications (the denominator).\n- h_index Integer: The h-index for this author.\n- i10_index Integer: The i-10 index for this author.\nWhile the 2-year mean citedness is normally a journal-level metric, it can be calculated for any set of papers, so we include it for authors.",
+                "ids": "All the external identifiers that we know about for this author. IDs are expressed as URIs whenever possible. Possible ID types:\n- openalex (String: this author's OpenAlex ID. Same as Author.id)\n- orcid (String: this author's ORCID ID. Same as Author.orcid)\n- scopus (String: this author's Scopus author ID)\n- twitter (String: this author's Twitter handle)\n- wikipedia (String: this author's Wikipedia page)\nMost authors are missing one or more ID types (either because we don't know the ID, or because it was never assigned). Keys for null IDs are not displayed.",
+                "affiliations": "List of objects, representing the affiliations this author has claimed in their publications. Each object in the list has two properties:\n- `institution`: a dehydrated Institution object\n- `years`: a list of the years in which this author claimed an affiliation with this institution",
+                "last_known_institutions": "List of Institution objects. This author's last known institutional affiliations. In this context \"last known\" means that we took all the author's Works, sorted them by publication date, and selected the most recent one. If there is only one affiliated institution for this author for the work, this will be a list of length 1; if there are multiple affiliations, they will all be included in the list. Each item in the list is a dehydrated Institution object, and you can find more documentation on the Institution page.",
+                "topics": "STRUCT(id VARCHAR, display_name VARCHAR, count BIGINT, score DOUBLE, subfield STRUCT(id VARCHAR, display_name VARCHAR), field STRUCT(id VARCHAR, display_name VARCHAR), \"domain\" STRUCT(id VARCHAR, display_name VARCHAR))[]",
+                "topic_share": "STRUCT(id VARCHAR, display_name VARCHAR, \"value\" DOUBLE, subfield STRUCT(id VARCHAR, display_name VARCHAR), field STRUCT(id VARCHAR, display_name VARCHAR), \"domain\" STRUCT(id VARCHAR, display_name VARCHAR))[]",
+                "x_concepts": "x_concepts will be deprecated and removed soon. We will be replacing this functionality with Topics instead.\nList: The concepts most frequently applied to works created by this author. Each is represented as a dehydrated Concept object, with one additional attribute:\n- score (Float): The strength of association between this author and the listed concept, from 0-100.",
+                "sources": "STRUCT(id VARCHAR, display_name VARCHAR, issn_l VARCHAR, issn VARCHAR[], is_oa BOOLEAN, is_in_doaj BOOLEAN, is_core BOOLEAN, host_organization VARCHAR, host_organization_name VARCHAR, host_organization_lineage VARCHAR[], host_organization_lineage_names VARCHAR[], \"type\" VARCHAR)[]",
+                "counts_by_year": "Author.works_count and Author.cited_by_count for each of the last ten years, binned by year. To put it another way: each year, you can see how many works this author published, and how many times they got cited.\nAny works or citations older than ten years old aren't included. Years with zero works and zero citations have been removed so you will need to add those in if you need them.",
+                "works_api_url": "A URL that will get you a list of all this author's works.\nWe express this as an API URL (instead of just listing the works themselves) because sometimes an author's publication list is too long to reasonably fit into a single author object.",
+                "updated_date": "The last time anything in this author object changed, expressed as an ISO 8601 date string. This date is updated for any change at all, including increases in various counts.",
+                "created_date": "The date this Author object was created in the OpenAlex dataset, expressed as an ISO 8601 date string."
+            }
+        }
+    }
 }
