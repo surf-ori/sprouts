@@ -1,5 +1,5 @@
-raw_data_path=$(jq -r '."raw-data-path"' <config.json)/${2}/
-log_path=$(pwd)/$(jq -r '."log-path"' <config.json)/${2}/
+raw_data_path=$(jq -r '."raw-data-path"' <config_current.json)/${2}/
+log_path=$(pwd)/$(jq -r '."log-path"' <config_current.json)/${2}/
 log_file=${log_path}${1}-$(date -Iseconds -u).txt
 
 mkdir -p $log_path

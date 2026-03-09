@@ -198,22 +198,29 @@ def _(config, datetime, os):
 
 
 @app.cell
-def _(json, mo):
-    with open('config.json') as f:
-        config_preset = json.load(f)
-    c = mo.ui.dictionary(elements={
-        k: mo.ui.text(value=v)
-        for k, v in config_preset.items()
-    })
-    c
-    return (c,)
+def _(mo):
+    config_path = mo.ui.text(value='config.json', full_width=True)
+    config_path
+    return (config_path,)
 
 
 @app.cell
-def _(c, os):
-    config = c.value
-    if not os.path.exists(config['raw-data-path']):
-        os.makedirs(config['raw-data-path'])
+def _(config_path, json, mo):
+    with open(config_path.value) as f:
+        config_preset = json.load(f)
+    config_form = mo.ui.dictionary(elements={
+        k: mo.ui.text(value=v)
+        for k, v in config_preset.items()
+    }).form(submit_button_label='Load config')
+    config_form
+    return (config_form,)
+
+
+@app.cell
+def _(config_form, json):
+    config = config_form.value
+    with open('config_current.json', 'w') as current_f:
+        json.dump(config, current_f)
     return (config,)
 
 
@@ -259,7 +266,9 @@ def _(
 
 
 @app.cell
-def _(mo, os):
+def _(config, mo, os):
+    if not os.path.exists(config['raw-data-path']):
+        os.makedirs(config['raw-data-path'])
     sources = os.listdir('sources')
     download_selection = mo.ui.multiselect(options=sources).form(submit_button_label="Download")
     download_selection
@@ -337,7 +346,7 @@ def _(config, mo):
         }).form(submit_button_label='Upload')
     else:
         remote_catalog_path = mo.md('')
-    
+
     remote_catalog_path
     return (remote_catalog_path,)
 
