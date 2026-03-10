@@ -83,7 +83,7 @@ def _(json, load_query_templates):
         with open(f'sources/{dataset}/metadata.json') as f:
             metadata = json.load(f)
 
-        objectstore_config_query = templates['attach-to-ducklake'].format(
+        objectstore_config_query = templates['objectstore-config'].format(
                                         key=config["objectstore-key"],
                                         secret=config["objectstore-secret"]) if config["data-path"].startswith('s3://') else ''
         attach_query = templates['attach-to-ducklake'].format(
