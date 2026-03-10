@@ -1,1 +1,1 @@
-COMMENT ON TABLE {dataset}."{table}"" IS '{description}';
+COMMENT ON TABLE {dataset}."{table}" IS '{description}';
