@@ -83,15 +83,14 @@ def _(json, load_query_templates):
         with open(f'sources/{dataset}/metadata.json') as f:
             metadata = json.load(f)
 
+        objectstore_config_query = templates['attach-to-ducklake'].format(
+                                        key=config["objectstore-key"],
+                                        secret=config["objectstore-secret"]) if config["data-path"].startswith('s3://') else ''
         attach_query = templates['attach-to-ducklake'].format(
                                         catalogpath=config["catalog-path"],
                                         datapath=config["data-path"],
-                                        datalake=config["datalake"],
-                                        key=config["objectstore-key"],
-                                        secret=config["objectstore-secret"])
-        detach_query = templates['detach'].format(catalogpath=config["catalog-path"],
-                                                  datapath=config["data-path"],
-                                                  datalake=config["datalake"])
+                                        datalake=config["datalake"])
+        detach_query = templates['detach'].format(datalake=config["datalake"])
 
         for table, table_props in metadata['tables'].items():
 
@@ -104,7 +103,7 @@ def _(json, load_query_templates):
                                                 tablepath=table_props["raw-files"]["path"],
                                                 tableschema=table_props['schema']
                                                 )
-            queries.append({'name': f'{table_props["raw-files"]["format"]}-to-parquet_({table})', 'string': query})
+            queries.append({'name': f'{table_props["raw-files"]["format"]}-to-parquet_({table})', 'string': objectstore_config_query + query})
 
             tableschemasql = ', '.join(f'"{k}" {v}' for k,v in table_props['schema'].items())
 
@@ -114,7 +113,7 @@ def _(json, load_query_templates):
                                     table=table,
                                     tableschemasql=tableschemasql
                                     )        
-            queries.append({'name': f'load-in-ducklake_({table})', 'string': attach_query + query + detach_query})
+            queries.append({'name': f'load-in-ducklake_({table})', 'string': objectstore_config_query + attach_query + query + detach_query})
 
             query = templates['comment-on-table'].format(datapath=config["data-path"],
                                                          dataset=dataset,
