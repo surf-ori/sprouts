@@ -104,8 +104,7 @@ def _(json, load_query_templates):
                                                 tablepath=table_props["raw-files"]["path"],
                                                 tableschema=table_props['schema']
                                                 )
-            queries.append({'name': f'{table_props["raw-files"]["format"]}-to-parquet_({table})',
-                            'string': attach_query + query + detach_query})
+            queries.append({'name': f'{table_props["raw-files"]["format"]}-to-parquet_({table})', 'string': query})
 
             tableschemasql = ', '.join(f'"{k}" {v}' for k,v in table_props['schema'].items())
 
