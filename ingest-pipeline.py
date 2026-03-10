@@ -107,10 +107,13 @@ def _(json, load_query_templates):
             queries.append({'name': f'{table_props["raw-files"]["format"]}-to-parquet_({table})',
                             'string': attach_query + query + detach_query})
 
+            tableschemasql = ', '.join(f'"{k}" {v}' for k,v in table_props['schema'].items())
+
             query = templates['load-in-ducklake'].format(datapath=config["data-path"],
                                                          datalake=config["datalake"],
                                     dataset=dataset,
-                                    table=table
+                                    table=table,
+                                    tableschemasql=tableschemasql
                                     )        
             queries.append({'name': f'load-in-ducklake_({table})', 'string': attach_query + query + detach_query})
 
