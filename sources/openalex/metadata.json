@@ -877,7 +877,7 @@
                 "best_oa_location": "STRUCT(id VARCHAR, \"source\" STRUCT(id VARCHAR, display_name VARCHAR, issn_l VARCHAR, issn VARCHAR[], is_oa BOOLEAN, is_in_doaj BOOLEAN, is_core BOOLEAN, host_organization VARCHAR, host_organization_name VARCHAR, host_organization_lineage VARCHAR[], host_organization_lineage_names VARCHAR[], \"type\" VARCHAR), is_oa BOOLEAN, is_published BOOLEAN, landing_page_url VARCHAR, pdf_url VARCHAR, raw_source_name VARCHAR, raw_type VARCHAR, provenance VARCHAR, license VARCHAR, license_id VARCHAR, \"version\" VARCHAR, is_accepted BOOLEAN)",
                 "license": "VARCHAR",
                 "sustainable_development_goals": "STRUCT(id VARCHAR, display_name VARCHAR, score VARCHAR)[]",
-                "awards": "List of grant objects, which include the Funder and the award ID, if available. Our grants data comes from Crossref, and is currently fairly limited.",
+                "awards": "STRUCT(id VARCHAR, display_name VARCHAR, funder_award_id VARCHAR,funder_id VARCHAR,funder_display_name VARCHAR)[]",
                 "funders": "STRUCT(id VARCHAR, display_name VARCHAR, ror VARCHAR)[]",
                 "institutions": "JSON[]",
                 "countries_distinct_count": "BIGINT",
