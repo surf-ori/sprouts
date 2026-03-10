@@ -7,6 +7,6 @@ CREATE OR REPLACE SECRET objectstore (
     SECRET '{secret}'
 );
 
-ATTACH 'ducklake:{catalogpath}/{datalake}.ducklake' as {datalake};
+ATTACH 'ducklake:{catalogpath}/{datalake}.ducklake' (DATA_PATH '{datapath}', OVERRIDE_DATA_PATH true) as {datalake};
 USE {datalake};
 
