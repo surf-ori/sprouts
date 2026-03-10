@@ -6,3 +6,4 @@ CREATE OR REPLACE SECRET objectstore (
     KEY_ID '{key}',
     SECRET '{secret}'
 );
+
