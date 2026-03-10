@@ -58,9 +58,9 @@ def _(os, shutil):
 
 @app.cell
 def _(get_log_file, os, subprocess):
-    def run_queries(datalake, dataset, query_set):
+    def run_queries(datalake, dataset, query_set, config):
         path = os.path.join('build/queries', datalake, dataset, query_set)
-        log_file = get_log_file(dataset, query_set)
+        log_file = get_log_file(dataset, query_set, config)
         with open(log_file, 'wb') as f:
             for filename in sorted(os.listdir(path)):
                 query_path = os.path.join(path, filename)
@@ -189,8 +189,8 @@ def _(subprocess):
 
 
 @app.cell
-def _(config, datetime, os):
-    def get_log_file(dataset, step):
+def _(datetime, os):
+    def get_log_file(dataset, step, config):
         path = f'{config['log-path']}/{dataset}'
         if not os.path.exists(path):
             os.makedirs(path)
@@ -335,7 +335,7 @@ def _(config, datasets, generate_load_queries, run_queries, write_queries):
     for dataset in datasets:
         load_queries = generate_load_queries(config, dataset)
         write_queries(load_queries, config['datalake'], dataset, 'loading')
-        run_queries(config['datalake'], dataset, 'loading')
+        run_queries(config['datalake'], dataset, 'loading', config)
     return
 
 
