@@ -176,12 +176,12 @@ def _(load_query_templates):
 
 
 @app.cell
-def _(subprocess):
+def _(get_log_file, subprocess):
     def download_dataset(dataset):
         print(f'downloading dataset "{dataset}"', end='')
-        # log_file = get_log_file(dataset, 'download')
-        # with open(log_file, 'wb') as f:
-        exit_code = subprocess.run(f'./sources/{dataset}/download.sh', shell=True, executable='/bin/bash')#, stdout=f, stderr=f)
+        log_file = get_log_file(dataset, 'download')
+        with open(log_file, 'wb') as f:
+            exit_code = subprocess.run(f'./sources/{dataset}/download.sh', shell=True, executable='/bin/bash', stdout=f, stderr=f)
         print('❌' if exit_code.returncode > 0 else '✔️')
 
     return (download_dataset,)
@@ -330,11 +330,12 @@ def _(args, load_selection, mo, sources):
 
 
 @app.cell
-def _(config, datasets, generate_load_queries, run_queries, write_queries):
-    for dataset in datasets:
-        load_queries = generate_load_queries(config, dataset)
-        write_queries(load_queries, config['datalake'], dataset, 'loading')
-        run_queries(config['datalake'], dataset, 'loading', config)
+def _(config, datasets, generate_load_queries, mo, run_queries, write_queries):
+    with mo.redirect_stdout():
+        for dataset in datasets:
+            load_queries = generate_load_queries(config, dataset)
+            write_queries(load_queries, config['datalake'], dataset, 'loading')
+            run_queries(config['datalake'], dataset, 'loading', config)
     return
 
 
