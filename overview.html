@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="https://unpkg.com/@knadh/oat/oat.min.css">
+        <script>
+ 
+      const getDb = async () => {
+        const duckdb = window.duckdbduckdbWasm;
+        // @ts-ignore
+        if (window._db) return window._db;
+        const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+      
+        // Select a bundle based on browser checks
+        const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+      
+        const worker_url = URL.createObjectURL(
+          new Blob([`importScripts("${bundle.mainWorker}");`], {
+            type: "text/javascript",
+          })
+        );
+      
+        // Instantiate the asynchronous version of DuckDB-wasm
+        const worker = new Worker(worker_url);
+        // const logger = null //new duckdb.ConsoleLogger();
+        const logger = new duckdb.ConsoleLogger();
+        const db = new duckdb.AsyncDuckDB(logger, worker);
+function progressHandler(progress) {
+   var percentage = 100 * progress.bytesLoaded / progress.bytesTotal / 6;
+   if (percentage > 100) percentage = 100;
+   percentage = Math.ceil(percentage);
+    //   document.getElementById("last_query_status").innerHTML = "4/5: Instantiating DuckDB-Wasm - Wasm module, " + percentage + "%";
+}
+        await db.instantiate(bundle.mainModule, bundle.pthreadWorker, progressHandler);
+        URL.revokeObjectURL(worker_url);
+        window._db = db;
+        return db;
+      };
+        </script>
+
+        <script type="module">
+            import * as duckdbduckdbWasm from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.31.1-dev35.0/+esm";
+
+            window.duckdbduckdbWasm = duckdbduckdbWasm;
+            async function fetch_info(ducklake_url, query, display_element, timer_element) {
+                getDb().then(async (db) => {
+                    // Create a new connection                
+                var setup_queries = "";
+                let start_time = Date.now();
+                var conn = await db.connect();
+                {
+                    await executeQuery(conn, "LOAD httpfs;");
+                    await executeQuery(conn, "LOAD ducklake;");
+                    await executeQuery(conn, "LOAD ducklake;");
+                    await executeQuery(conn, "USE memory; DETACH sprouts;");
+                    // res = await executeQuery(conn, "SELECT * FROM read_xlsx('https://zenodo.org/records/17195184/files/Diamond%20OA%20-%20NL%20Journals%20-%20WGNM%20-%20FINAL%20-%20SHAREABLE-version%202.xlsx', sheet='Included DOA Journals', header=true, ignore_errors=true);")
+                    await executeQuery(conn, "ATTACH 'ducklake:" + ducklake_url + "' as sprouts; USE sprouts;")
+                    let res = await executeQuery(conn, query)
+                    console.log(res);
+                    let results = res.toArray().map((row) => row.toJSON());
+                    let results_element = document.getElementById(display_element);
+                    results_element.innerHTML = ""; //JSON.stringify(res.toArray().map((row) => row.toJSON()));
+                    let table_element = document.createElement("table");
+                    let row_element = document.createElement("tr");
+                    Object.keys(results[0]).forEach(key =>{
+                            let cell = document.createElement("th");
+                            cell.innerHTML = key;
+                            row_element.appendChild(cell);
+                        });
+                    table_element.appendChild(row_element);
+                    results.forEach(row => {
+                        let row_element = document.createElement("tr")
+                        Object.values(row).forEach(value =>{
+                            let cell = document.createElement("td");
+                            cell.innerHTML = value;
+                            row_element.appendChild(cell);
+                        })
+                        table_element.appendChild(row_element)
+                    });
+                    results_element.appendChild(table_element)
+                    
+                }
+                document.getElementById(timer_element).innerHTML = `Took ${(Date.now() - start_time)/1000} s to run.`
+
+                async function executeQuery(conn, sql, append = false) {
+                        // document.getElementById("last_query").innerHTML = setup_queries + sql;
+                        // document.getElementById("last_query_status").innerHTML = "Executing...";
+                        if (window.updateStatusIndicator) window.updateStatusIndicator("Executing...");
+                        var error = null;
+                        const startTime = performance.now();
+                        var res = await conn.query(sql).catch((e) => {error = e; console.log(e);});
+                        const endTime = performance.now();
+                        var is_valid = true;
+                        if (error !== null) {
+                            // document.getElementById("last_query").innerHTML = error;
+                            // document.getElementById("last_query_status").innerHTML = "Error!";
+                        if (window.updateStatusIndicator) window.updateStatusIndicator("Error!");
+                            is_valid = false;
+                        } else {
+                            // document.getElementById("last_query_status").innerHTML = "Idle";
+                            // if (window.updateStatusIndicator) window.updateStatusIndicator("Idle");
+                            is_valid = true;
+                        }
+                        if (append) {
+                            setup_queries += sql;
+                            setup_queries += "\n";
+                        }
+
+                        return res;
+                }
+    
+            });   
+            }
+
+            let connect = document.getElementById("connect")
+            let overview_query = "SELECT s.schema_name, t.table_name, ts.record_count\
+                                                        FROM __ducklake_metadata_sprouts.ducklake_schema s\
+                                                        JOIN __ducklake_metadata_sprouts.ducklake_table t\
+                                                        USING (schema_id)\
+                                                        JOIN __ducklake_metadata_sprouts.ducklake_table_stats ts\
+                                                        USING (table_id)\
+                                                        WHERE s.schema_name != 'main';";
+            connect.addEventListener("click", e => fetch_info(document.getElementById('ducklake_url').value, overview_query, "overview", "connect_timer"))
+
+            let run = document.getElementById("run")
+            run.addEventListener("click", e => fetch_info(document.getElementById('ducklake_url').value, document.getElementById('query').value, "results", "run_timer"))
+        </script>
+    </head>
+    <body>
+        <details>
+            <summary>Overview</summary>
+            <div>
+                <input id="ducklake_url" type="text" value="https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts-demo/sprouts.ducklake" style="width: 800px"/>
+                <button id="connect">Connect</button><div id="connect_timer"></div>
+            </div>
+
+            <div id="overview"></div>
+        </details>
+        <details>
+            <summary>Query</summary>
+            <div>
+                <input id="query" type="text" value="SELECT * FROM openapc.apc LIMIT 10" style="width: 800px"/>
+                <button id="run">Run</button><div id="run_timer"></div>
+            </div>
+
+            <div id="results"></div>
+        </details>
+    </body>
+</html>
