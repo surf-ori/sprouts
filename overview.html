@@ -41,26 +41,31 @@
                 return db;
             }
 
-            async function executeQuery(conn, sql, setup_queries = "") {
+            async function getConnection(ducklake_url) {
+                const db = await getDb();
+                var conn = await db.connect();
+                await executeQuery(conn, "LOAD httpfs;");
+                await executeQuery(conn, "LOAD ducklake;");
+                await executeQuery(conn, "USE memory; DETACH sprouts;");
+                await executeQuery(conn, "ATTACH 'ducklake:" + ducklake_url + "' as sprouts; USE sprouts;")
+                return conn;
+            }
+
+            async function executeQuery(conn, query, setup_queries = "") {
                     var error = null;
                     const startTime = performance.now();
-                    var results = await conn.query(setup_queries + sql).catch((e) => {error = e; console.log(e);});
+                    var results = await conn.query(setup_queries + query).catch((e) => {error = e; console.log(e);});
                     const runTime = performance.now() - startTime;
                    
                     return {results, error, runTime};
             }
 
-            async function fetch_info(ducklake_url, query, display_element, timer_element) {
-                getDb().then(async (db) => {
-                        // Create a new connection                
+            async function fetch_info(conn, query, display_element, timer_element) {
                     var setup_queries = "";
                     let start_time = Date.now();
-                    var conn = await db.connect();
+                    // var conn = await getConnection(ducklake_url);
                     {
-                        await executeQuery(conn, "LOAD httpfs;");
-                        await executeQuery(conn, "LOAD ducklake;");
-                        await executeQuery(conn, "USE memory; DETACH sprouts;");
-                        await executeQuery(conn, "ATTACH 'ducklake:" + ducklake_url + "' as sprouts; USE sprouts;")
+                        
                         let res = await executeQuery(conn, query)
                         console.log(res);
                         let results = res.results.toArray().map((row) => row.toJSON());
@@ -87,8 +92,9 @@
                         
                     }
                     document.getElementById(timer_element).innerHTML = `Took ${(Date.now() - start_time)/1000} s to run.`    
-                });   
             }
+
+            var conn = await getConnection(document.getElementById('ducklake_url').value);
 
             let connect = document.getElementById("connect")
             let overview_query = "SELECT s.schema_name, t.table_name, ts.record_count\
@@ -98,10 +104,10 @@
                                                         JOIN __ducklake_metadata_sprouts.ducklake_table_stats ts\
                                                         USING (table_id)\
                                                         WHERE s.schema_name != 'main';";
-            connect.addEventListener("click", e => fetch_info(document.getElementById('ducklake_url').value, overview_query, "overview", "connect_timer"))
+            connect.addEventListener("click", e => fetch_info(conn, overview_query, "overview", "connect_timer"))
 
             let run = document.getElementById("run")
-            run.addEventListener("click", e => fetch_info(document.getElementById('ducklake_url').value, document.getElementById('query').value, "results", "run_timer"))
+            run.addEventListener("click", e => fetch_info(conn, document.getElementById('query').value, "results", "run_timer"))
         </script>
     </head>
     <body>
