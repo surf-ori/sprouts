@@ -2,12 +2,13 @@
 # requires-python = ">=3.13"
 # dependencies = [
 #     "altair==6.0.0",
-#     "duckdb==1.4.4",
+#     "duckdb==1.5.1",
 #     "marimo>=0.20.2",
-#     "numpy==2.4.2",
-#     "polars[pyarrow]==1.38.1",
-#     "pydantic-ai==1.63.0",
-#     "sqlglot==29.0.1",
+#     "numpy==2.4.3",
+#     "polars[pyarrow]==1.39.3",
+#     "pydantic-ai==1.70.0",
+#     "requests==2.32.5",
+#     "sqlglot==30.0.3",
 # ]
 # ///
 
@@ -66,9 +67,7 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    This dashboard is part of the [**PID to Portal project**](https://communities.surf.nl/en/open-research-information/article/from-pid-to-portal-strengthening-the-open-research-information) from SURF and UNL.
-
-    Our goals is to create an overview of available and actively queryable Open Research Information Resources / Datasets, that the ORI community can start using freely. [Code available.](https://github.com/surf-ori/sprouts/)
+    This dashboard is part of the [**PID to Portal project**](https://communities.surf.nl/en/open-research-information/article/from-pid-to-portal-strengthening-the-open-research-information) from SURF and UNL. Our goals is to create an overview of available and actively queryable Open Research Information Resources / Datasets, that the ORI community can start using freely. [Code available.](https://github.com/surf-ori/sprouts/)
     """)
     return
 
