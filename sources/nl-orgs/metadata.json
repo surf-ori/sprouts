@@ -1,0 +1,27 @@
+{
+    "name": "NL Organizations",
+    "description": "Core data on Dutch research organizations.",
+    "url": "",
+    "tables": {
+        "baseline": {
+            "description": "Dutch records and their ROR identifiers",
+            "raw-files": {"path": "nl-orgs-baseline.xlsx", "format": "xlsx"},
+            "schema": {
+                "full_name_in_English": "VARCHAR",
+                "acronym_EN": "VARCHAR",
+                "acronym_AGG": "VARCHAR",
+                "main_grouping": "VARCHAR",
+                "ROR": "VARCHAR",
+                "ROR_LINK": "VARCHAR"
+            },
+            "column-descriptions": {
+                "full_name_in_English": "VARCHAR",
+                "acronym_EN": "VARCHAR",
+                "acronym_AGG": "VARCHAR",
+                "main_grouping": "VARCHAR",
+                "ROR": "VARCHAR",
+                "ROR_LINK": "VARCHAR"
+            }
+        }
+    }
+}
