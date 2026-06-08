@@ -8,5 +8,5 @@ FROM (
     FROM read_{format}('{rawdatapath}/{dataset}/{tablepath}')
 );
 
-.shell <build/schemas/{dataset}/{table}_.json jq -s '[.[] | {{(.column_name): .column_type}}] | add' >build/schemas/{dataset}/{table}.json
+.shell "<build/schemas/{dataset}/{table}_.json jq -s '[.[] | {{(.column_name): .column_type}}] | add' >build/schemas/{dataset}/{table}.json"
 .shell rm build/schemas/{dataset}/{table}_.json

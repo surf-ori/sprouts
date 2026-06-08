@@ -308,7 +308,7 @@ def _(
     for extract_dataset in extract_selection.value:
         schema_queries = generate_schema_queries(config, extract_dataset)
         write_queries(schema_queries, config['datalake'], extract_dataset, 'schema-extraction')
-        run_queries(config['datalake'], extract_dataset, 'schema-extraction')
+        run_queries(config['datalake'], extract_dataset, 'schema-extraction', config)
     return
 
 
@@ -324,7 +324,7 @@ def _(args, load_selection, mo, sources):
     datasets = args.datasets or load_selection.value
     unknown_datasets = [dataset for dataset in datasets if dataset not in sources]
     if unknown_datasets:
-        print(f'Do no know {unknown_datasets}. Select one of the following dataset: {sources}')
+        print(f'Do not know {unknown_datasets}. Select one of the following dataset: {sources}')
         mo.stop(True)
     return (datasets,)
 
