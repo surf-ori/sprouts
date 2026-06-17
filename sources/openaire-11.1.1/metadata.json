@@ -95,4 +95,5 @@
                 "declaredAffiliations": "The affiliations declared by the author in the product metadata. Each entry captures the raw affiliation string as it appears in the source, together with the list of organizations that have been matched to that string by the affiliation resolution process."
             }
         }
+    }
 }
