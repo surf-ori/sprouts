@@ -9,8 +9,24 @@ def _():
     import marimo as mo
     import polars as pl
     import altair as alt
+    import json
 
-    return alt, mo
+    return json, mo
+
+
+@app.cell
+def _(mo):
+    config_path = mo.ui.text(value='config-cloud.json', full_width=True)
+    config_path
+    return (config_path,)
+
+
+@app.cell
+def _(config_path, json):
+    with open(config_path.value) as f:
+        config = json.load(f)
+    config
+    return (config,)
 
 
 @app.cell(hide_code=True)
@@ -27,27 +43,7 @@ def _(mo):
 def _(mo):
     _df = mo.sql(
         f"""
-        ATTACH 'ducklake:https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts/catalog.ducklake' AS sprouts; USE sprouts;
-        """
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    _df = mo.sql(
-        f"""
-        select count() from openalex.works; --old
-        """
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    _df = mo.sql(
-        f"""
-        select count() from openalex.works; --new ingestion
+        ATTACH 'ducklake:https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts-dev/catalog.ducklake' AS sprouts; USE sprouts;
         """
     )
     return
@@ -72,25 +68,90 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _(config, mo):
     _df = mo.sql(
         f"""
+        -- secret necessary to write data back to the object store
+        CREATE OR REPLACE SECRET objectstore (
+            TYPE s3,
+            ENDPOINT 'objectstore.surf.nl',
+            URL_STYLE 'path',
+            PROVIDER config,
+            KEY_ID '{config["objectstore-key"]}',
+            SECRET '{config["objectstore-secret"]}'
+        );
+        """
+    )
+    return
+
+
+@app.cell
+def _(config, mo):
+    _df = mo.sql(
+        f"""
+        -- select works from OpenAlex that have at least one author who is affiliated with a Dutch organization
+        -- each record represents one unique work-author-affiliation combination,
+        -- so there might be multiple records for the same author if multiple affiliations are listed
         COPY (
-            SELECT id, doi, ror, authorship --first(doi) as doi, ror
+            SELECT id, doi, ror, authorship
             FROM (
-                SELECT id, doi, unnest(authorship.institutions).ror AS ror, authorship
+                SELECT *, unnest(authorship.institutions).ror AS ror
                 FROM (
-                	SELECT id, doi, unnest(authorships) as authorship FROM openalex.works LIMIT 10000
+                	SELECT id, doi, unnest(authorships) as authorship
+            		FROM openalex.works
                 )
                 WHERE authorship.institutions IS NOT NULL
             )
-            WHERE ror
-            IN (
+            WHERE ror IN (
             	SELECT ROR_LINK FROM "nl-orgs".baseline
             )
-            -- GROUP BY id, ror
         )
-        TO 'openalex_NL' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb', OVERWRITE)
+        TO '{config["data-path"]}/pid2portal/openalex_NL_ror' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb', OVERWRITE)
+        """
+    )
+    return
+
+
+@app.cell
+def _(config, mo):
+    _df = mo.sql(
+        f"""
+        -- select works from OpenAire that have at least one author who is affiliated with a Dutch organization
+        -- each record represents one unique work-author-affiliation combination,
+        -- so there might be multiple records for the same author if multiple affiliations are listed
+        copy (
+            select id, doi, ror, declaredAffiliation
+            from (
+                select *, unnest(declaredAffiliation.matchingOrganizations).ror as ror
+                from (
+                    select product as id, unnest(declaredAffiliations) as declaredAffiliation
+                    from "openaire-11.1.1".authorships
+                )
+            )
+            join (
+                -- this query produces one record per doi
+                -- (could be multiple records per publication if multiple dois were assigned)
+                -- and one record per publication without doi
+                select
+                    id,
+                    unnest(
+                        ifnull(
+                            list('https://doi.org/' || pid.value) FILTER (pid.scheme = 'doi'), [null]
+                        )
+                    ) as doi,
+                    -- case when list(pid) != [null] then list(pid) end as pids
+                from (
+                    select *, unnest(ifnull(pids, [null])) as pid
+                    from "openaire-11.1.1".publications
+                )
+                group by id
+            )
+            using (id)
+            where ror in (
+                    SELECT ROR_LINK FROM "nl-orgs".baseline
+            )
+        ) to '{config["data-path"]}/pid2portal/openaire_NL_ror' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
+
         """
     )
     return
@@ -100,55 +161,7 @@ def _(mo):
 def _(mo):
     _df = mo.sql(
         f"""
-        SELECT id, doi, unnest(authorships) FROM openalex.works LIMIT 10;
-        """
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    _df = mo.sql(
-        f"""
-        select * from 'openalex_NL/*.parquet';
-        """
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    _df = mo.sql(
-        f"""
-        select * from "nl-orgs".baseline limit 10;
-        """
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    _df = mo.sql(
-        f"""
-        describe openaire.publications;
-        """
-    )
-    return
-
-
-app._unparsable_cell(
-    r"""
-    select count() from openaire.publications where organizations is not null limit 10;
-    """,
-    name="_"
-)
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    _df = mo.sql(
-        f"""
-        select organizations from openaire.publications where organizations is not null limit 10;
+        select * from 'https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts-dev/data/pid2portal/openalex_NL_ror/data_0.parquet' limit 100;
         """
     )
     return
@@ -158,64 +171,9 @@ def _(mo):
 def _(mo):
     _df = mo.sql(
         f"""
-        select (authorship.author.orcid IS NOT NULL) AS has_orcid from 'openalex_NL/*.parquet';
+        select * from 'https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts-dev/data/pid2portal/openaire_NL_ror/data_0.parquet' limit 100;
         """
     )
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    _df = mo.sql(
-        f"""
-        select *, (repository is not null) as included
-            from 'openalex_NL/*.parquet'
-            left join (
-            	from cris.publications 
-                -- where repository_info.ror = 'https://ror.org/02jz4aj89'
-            )    
-            on doi = 'https://doi.org/' || "cerif:DOI"
-        """
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    df = mo.sql(
-        f"""
-        select ror, included, count()
-        from (
-            select *, (repository is not null) as included
-            from 'openalex_NL/*.parquet'
-            left join (
-            	from cris.publications 
-                -- where repository_info.ror = 'https://ror.org/02jz4aj89'
-            )    
-            on doi = 'https://doi.org/' || "cerif:DOI"
-        )
-        group by ror, included
-        """
-    )
-    return (df,)
-
-
-@app.cell
-def _(alt, df):
-    (
-        alt.Chart(df)
-        .mark_bar()
-        .encode(
-            alt.X(field='count_star()', type='quantitative'),
-            alt.Y(field='ror'),
-            alt.Color(field='included')
-        )
-    )
-    return
-
-
-@app.cell
-def _():
     return
 
 
