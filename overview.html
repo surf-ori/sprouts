@@ -6,7 +6,7 @@
         <script type="module">
             // This is reusing snippets of code from the DuckDB Iceberg browser (https://duckdb.org/2025/12/16/iceberg-in-the-browser)
 
-            import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.33.1-dev36.0/+esm";
+            import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.33.1-dev48.0/+esm";
 
             async function getDb() {
                 // @ts-ignore
@@ -28,27 +28,23 @@
                 const logger = new duckdb.ConsoleLogger();
                 const db = new duckdb.AsyncDuckDB(logger, worker);
 
-                function progressHandler(progress) {
-                    var percentage = 100 * progress.bytesLoaded / progress.bytesTotal / 6;
-                    if (percentage > 100) percentage = 100;
-                    percentage = Math.ceil(percentage);
-                        //   document.getElementById("last_query_status").innerHTML = "4/5: Instantiating DuckDB-Wasm - Wasm module, " + percentage + "%";
-                }
-
-                await db.instantiate(bundle.mainModule, bundle.pthreadWorker, progressHandler);
+                await db.instantiate(bundle.mainModule, bundle.pthreadWorker, (progress) => {});
                 URL.revokeObjectURL(worker_url);
                 window._db = db;
                 return db;
             }
 
-            async function getConnection(ducklake_url) {
+            async function getConnection() {
                 const db = await getDb();
                 var conn = await db.connect();
+                return conn;
+            }
+
+            async function attachDucklake(conn, ducklake_url) {
                 await executeQuery(conn, "LOAD httpfs;");
                 await executeQuery(conn, "LOAD ducklake;");
-                await executeQuery(conn, "USE memory; DETACH sprouts;");
-                await executeQuery(conn, "ATTACH 'ducklake:" + ducklake_url + "' as sprouts; USE sprouts;")
-                return conn;
+                // await executeQuery(conn, "USE memory; DETACH db;");
+                await executeQuery(conn, "ATTACH 'ducklake:" + ducklake_url + "' as db; USE db;")
             }
 
             async function executeQuery(conn, query, setup_queries = "") {
@@ -63,59 +59,90 @@
             async function fetch_info(conn, query, display_element, timer_element) {
                     var setup_queries = "";
                     let start_time = Date.now();
-                    // var conn = await getConnection(ducklake_url);
-                    {
                         
-                        let res = await executeQuery(conn, query)
-                        console.log(res);
-                        let results = res.results.toArray().map((row) => row.toJSON());
-                        let results_element = document.getElementById(display_element);
-                        results_element.innerHTML = ""; //JSON.stringify(res.toArray().map((row) => row.toJSON()));
-                        let table_element = document.createElement("table");
-                        let row_element = document.createElement("tr");
-                        Object.keys(results[0]).forEach(key =>{
-                                let cell = document.createElement("th");
-                                cell.innerHTML = key;
-                                row_element.appendChild(cell);
-                            });
-                        table_element.appendChild(row_element);
-                        results.forEach(row => {
-                            let row_element = document.createElement("tr")
-                            Object.values(row).forEach(value =>{
-                                let cell = document.createElement("td");
-                                cell.innerHTML = value;
-                                row_element.appendChild(cell);
-                            })
-                            table_element.appendChild(row_element)
-                        });
-                        results_element.appendChild(table_element)
-                        
+                    let res = await executeQuery(conn, query)
+                    console.log(res);
+
+                    if (res.error !== null) {
+                        document.getElementById(timer_element).innerHTML = res.error;
+                        return    
                     }
+                    
+                    let results = res.results.toArray().map((row) => row.toJSON());
+                    let results_element = document.getElementById(display_element);
+                    results_element.innerHTML = "";
+                    let table_element = document.createElement("table");
+                    let row_element = document.createElement("tr");
+                    Object.keys(results[0]).forEach(key =>{
+                            let cell = document.createElement("th");
+                            cell.innerHTML = key;
+                            row_element.appendChild(cell);
+                        });
+                    table_element.appendChild(row_element);
+                    results.forEach(row => {
+                        let row_element = document.createElement("tr")
+                        Object.values(row).forEach(value =>{
+                            let cell = document.createElement("td");
+                            cell.innerHTML = value;
+                            row_element.appendChild(cell);
+                        })
+                        table_element.appendChild(row_element)
+                    });
+                    results_element.appendChild(table_element)
+                    
                     document.getElementById(timer_element).innerHTML = `Took ${(Date.now() - start_time)/1000} s to run.`    
             }
 
-            var conn = await getConnection(document.getElementById('ducklake_url').value);
-
-            let connect = document.getElementById("connect")
-            let overview_query = "SELECT s.schema_name, t.table_name, ts.record_count\
-                                                        FROM __ducklake_metadata_sprouts.ducklake_schema s\
-                                                        JOIN __ducklake_metadata_sprouts.ducklake_table t\
+            async function metadata(conn, display_element) {
+                let overview_query = "SELECT s.schema_name, t.table_name, ts.record_count\
+                                                        FROM __ducklake_metadata_db.ducklake_schema s\
+                                                        JOIN __ducklake_metadata_db.ducklake_table t\
                                                         USING (schema_id)\
-                                                        JOIN __ducklake_metadata_sprouts.ducklake_table_stats ts\
+                                                        JOIN __ducklake_metadata_db.ducklake_table_stats ts\
                                                         USING (table_id)\
                                                         WHERE s.schema_name != 'main';";
-            connect.addEventListener("click", e => fetch_info(conn, overview_query, "overview", "connect_timer"))
 
+                let res = await executeQuery(conn, query)
+                console.log(res);
+                let results = res.results.toArray().map((row) => row.toJSON());
+
+
+                
+            }
+
+            var conn = await getConnection();
+
+            // let connect = document.getElementById("connect")
+            let overview_query = "SELECT s.schema_name, t.table_name, ts.record_count\
+                                                        FROM __ducklake_metadata_db.ducklake_schema s\
+                                                        JOIN __ducklake_metadata_db.ducklake_table t\
+                                                        USING (schema_id)\
+                                                        JOIN __ducklake_metadata_db.ducklake_table_stats ts\
+                                                        USING (table_id)\
+                                                        WHERE s.schema_name != 'main';";
+
+            let ducklake_url = window.location.href.replace("overview.html", "catalog.ducklake");
+            document.getElementById("connection_command").innerHTML = `ATTACH 'ducklake:${ducklake_url}' as db; USE db;`
+            await attachDucklake(conn, ducklake_url)//document.getElementById('ducklake_url').value);
+            await fetch_info(conn, overview_query, "overview", "connect_timer")
+            // await metadata(conn, "overview")
+            // connect.addEventListener("click", async function(e) {
+            //     await fetch_info(conn, overview_query, "overview", "connect_timer")
+            // })
             let run = document.getElementById("run")
             run.addEventListener("click", e => fetch_info(conn, document.getElementById('query').value, "results", "run_timer"))
         </script>
     </head>
     <body>
+        <h1>Ducklake with Open Research Information</h1>
+        <p>This Ducklake contains a number of publically datasets in a format that can be queried right away. To do that you need to work with [DuckDB](https://duckdb.org) in any of the supported environments. You can connect with the following command:</p>
+        <pre><code id="connection_command"></code></pre>
         <details>
             <summary>Overview</summary>
             <div>
-                <input id="ducklake_url" type="text" value="https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts/catalog.ducklake" style="width: 800px"/>
-                <button id="connect">Connect</button><div id="connect_timer"></div>
+                <!-- <input id="ducklake_url" type="text" value="https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts/catalog.ducklake" style="width: 800px"/> -->
+                <!-- <button id="connect">Connect</button> -->
+                 <div id="connect_timer"></div>
             </div>
 
             <div id="overview"></div>
