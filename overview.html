@@ -294,12 +294,65 @@ async function renderL1(conn) {
   `).join('');
 }
 
+// ── L2: Schema cards ────────────────────────────────────────────────────────
+
+async function renderL2(conn) {
+  const rows = await runQuery(conn, `
+    SELECT
+      s.schema_name,
+      COUNT(t.table_id)                                            AS table_count,
+      COALESCE(SUM(ts.record_count),    0)                        AS total_records,
+      COALESCE(SUM(ts.file_size_bytes), 0)                        AS total_size,
+      MAX(sn.snapshot_time)                                        AS last_modified
+    FROM __ducklake_metadata_db.ducklake_schema s
+    JOIN __ducklake_metadata_db.ducklake_table t
+      ON s.schema_id = t.schema_id AND t.end_snapshot IS NULL
+    JOIN __ducklake_metadata_db.ducklake_table_stats ts
+      ON t.table_id = ts.table_id
+    JOIN __ducklake_metadata_db.ducklake_snapshot sn
+      ON t.begin_snapshot = sn.snapshot_id
+    WHERE s.schema_name != 'main'
+    GROUP BY s.schema_name
+    ORDER BY s.schema_name
+  `);
+
+  const grid = document.createElement('div');
+  grid.className = 'card-grid';
+
+  rows.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'info-card';
+    card.innerHTML = `
+      <h3>${r.schema_name}</h3>
+      <div class="card-meta">
+        📋 ${fmtNum(r.table_count)} dataset${r.table_count !== 1 ? 's' : ''}<br>
+        🔢 ${fmtNum(r.total_records)} records<br>
+        💾 ${fmtSize(r.total_size)}<br>
+        🕒 ${fmtDate(r.last_modified)}
+      </div>
+    `;
+    card.addEventListener('click', () => navigateToL3(r.schema_name));
+    grid.appendChild(card);
+  });
+
+  document.getElementById('breadcrumb').style.display = 'none';
+  document.getElementById('content-area').innerHTML = '';
+  document.getElementById('content-area').appendChild(grid);
+}
+
+// ── L3: Navigate to schema (Task 5 will render tables) ──────────────────────
+
+async function navigateToL3(schemaName) {
+  state.schema = schemaName;
+  // Task 5 will render L3 here
+}
+
 // ── Render dashboard (Tasks 3-6 progressive build) ──────────────────────────
 
 async function renderDashboard() {
   document.getElementById('content-area').innerHTML = '<p style="color:#888">Loading metadata…</p>';
   await renderL1(state.conn);
-  // Task 4 will call renderL2 here
+  await renderL2(state.conn);
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
