@@ -404,10 +404,72 @@ async function navigateToL3(schemaName) {
   await renderL3(state.conn, schemaName);
 }
 
-// Stub — Task 6 fills this in
+async function renderL4(conn, schemaName, tableId, tableName) {
+  const rows = await runQuery(conn, `
+    SELECT
+      c.column_order,
+      c.column_name,
+      c.column_type,
+      ct.value AS description
+    FROM __ducklake_metadata_db.ducklake_column c
+    LEFT JOIN __ducklake_metadata_db.ducklake_column_tag ct
+      ON c.column_id = ct.column_id AND ct.key = 'comment' AND ct.end_snapshot IS NULL
+    WHERE c.table_id = ${tableId} AND c.end_snapshot IS NULL
+    ORDER BY c.column_order
+  `);
+
+  // Breadcrumb
+  const bc = document.getElementById('breadcrumb');
+  bc.innerHTML = `
+    <span class="crumb" id="bc-catalog">Catalog</span>
+    <span class="sep">›</span>
+    <span class="crumb" id="bc-schema">${schemaName}</span>
+    <span class="sep">›</span>
+    <span class="crumb">${tableName}</span>
+  `;
+  bc.style.display = 'block';
+  document.getElementById('bc-catalog').addEventListener('click', () => renderDashboard());
+  document.getElementById('bc-schema').addEventListener('click', () => navigateToL3(schemaName));
+
+  // Copy & run button
+  const previewSql = `SELECT * FROM ${schemaName}.${tableName} LIMIT 10`;
+  const btnCopyRun = document.createElement('button');
+  btnCopyRun.textContent = '▶ Copy & run: ' + previewSql;
+  btnCopyRun.style.cssText = 'margin-bottom:1rem;font-size:0.85rem;font-family:monospace';
+  btnCopyRun.addEventListener('click', () => {
+    document.getElementById('query').value = previewSql;
+    document.getElementById('query-section').open = true;
+    runUserQuery();
+    document.getElementById('query-section').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // Column table
+  const table = document.createElement('table');
+  table.className = 'col-table';
+  table.innerHTML = `
+    <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+  `;
+  const tbody = document.createElement('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.column_name}</td>
+      <td>${r.column_type}</td>
+      <td style="color:#555">${r.description ?? ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+
+  document.getElementById('content-area').innerHTML = '';
+  document.getElementById('content-area').appendChild(btnCopyRun);
+  document.getElementById('content-area').appendChild(table);
+}
+
 async function navigateToL4(schemaName, tableId, tableName) {
   state.tableId = tableId;
   state.tableName = tableName;
+  await renderL4(state.conn, schemaName, tableId, tableName);
 }
 
 // ── Render dashboard (Tasks 3-6 progressive build) ──────────────────────────
