@@ -67,6 +67,12 @@
     <!-- L1: stat chips (filled by JS) -->
     <div id="stat-row" class="stat-row"></div>
 
+    <!-- Connection command (filled by JS) -->
+    <details id="connect-cmd" style="margin:0.5rem 0 1rem;font-size:0.85rem">
+      <summary style="cursor:pointer;color:#0066cc">DuckDB connection command</summary>
+      <pre style="background:#f4f4f4;padding:0.75rem;border-radius:4px;overflow-x:auto;margin-top:0.5rem"><code id="connection_command"></code></pre>
+    </details>
+
     <!-- Breadcrumb (hidden at L2) -->
     <nav id="breadcrumb" style="display:none"></nav>
 
@@ -121,6 +127,13 @@ function clearError() {
   const el = document.getElementById('status-msg');
   el.textContent = '';
   el.className = '';
+}
+
+function setLoading(on) {
+  if (on) {
+    document.getElementById('content-area').innerHTML =
+      '<p style="color:#888;padding:1rem">⏳ Loading…</p>';
+  }
 }
 
 // ── DuckDB ───────────────────────────────────────────────────────────────────
@@ -190,6 +203,8 @@ async function connect(catalogUrl) {
     // Show connection URL in settings input
     document.getElementById('catalog-url').value = catalogUrl;
     // Set the connection command for reference
+    document.getElementById('connection_command').textContent =
+      `ATTACH 'ducklake:${catalogUrl}' AS db; USE db;`;
     await renderDashboard();
   } catch (e) {
     showError('Connection failed: ' + e.message);
@@ -401,7 +416,12 @@ async function navigateToL3(schemaName) {
   state.schema = schemaName;
   state.tableId = null;
   state.tableName = null;
-  await renderL3(state.conn, schemaName);
+  setLoading(true);
+  try {
+    await renderL3(state.conn, schemaName);
+  } catch (e) {
+    showError('Failed to load schema: ' + e.message);
+  }
 }
 
 async function renderL4(conn, schemaName, tableId, tableName) {
@@ -469,15 +489,25 @@ async function renderL4(conn, schemaName, tableId, tableName) {
 async function navigateToL4(schemaName, tableId, tableName) {
   state.tableId = tableId;
   state.tableName = tableName;
-  await renderL4(state.conn, schemaName, tableId, tableName);
+  setLoading(true);
+  try {
+    await renderL4(state.conn, schemaName, tableId, tableName);
+  } catch (e) {
+    showError('Failed to load table: ' + e.message);
+  }
 }
 
 // ── Render dashboard (Tasks 3-6 progressive build) ──────────────────────────
 
 async function renderDashboard() {
-  document.getElementById('content-area').innerHTML = '<p style="color:#888">Loading metadata…</p>';
-  await renderL1(state.conn);
-  await renderL2(state.conn);
+  setLoading(true);
+  try {
+    await renderL1(state.conn);
+    await renderL2(state.conn);
+  } catch (e) {
+    showError('Failed to load catalog metadata: ' + e.message);
+    document.getElementById('content-area').innerHTML = '';
+  }
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
