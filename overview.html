@@ -113,8 +113,11 @@ function fmtNum(n) {
 }
 
 function fmtDate(ts) {
-  if (!ts) return '—';
-  return new Date(ts).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+  if (ts == null) return '—';
+  if (typeof ts === 'bigint') ts = Number(ts / 1000n); // microseconds → milliseconds
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function showError(msg) {
