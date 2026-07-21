@@ -6,7 +6,7 @@
         <script type="module">
             // This is reusing snippets of code from the DuckDB Iceberg browser (https://duckdb.org/2025/12/16/iceberg-in-the-browser)
 
-            import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.33.1-dev48.0/+esm";
+            import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.33.1-dev57.0/+esm";
 
             async function getDb() {
                 // @ts-ignore
@@ -59,12 +59,23 @@
             async function fetch_info(conn, query, display_element, timer_element) {
                     var setup_queries = "";
                     let start_time = Date.now();
+
+                    document.getElementById("run").setAttribute("aria-busy", "true")
+
+                    if (timer_element != "") {
+                        document.getElementById(timer_element).innerHTML = ""
+                        document.getElementById(timer_element).classList.remove("badge")
+                        document.getElementById(timer_element).removeAttribute("data-variant")
+                    }
                         
                     let res = await executeQuery(conn, query)
                     console.log(res);
 
                     if (res.error !== null) {
                         document.getElementById(timer_element).innerHTML = res.error;
+                        document.getElementById(timer_element).classList.add("badge")
+                        document.getElementById(timer_element).setAttribute("data-variant", "danger")
+                        document.getElementById("run").removeAttribute("aria-busy")
                         return    
                     }
                     
@@ -72,13 +83,17 @@
                     let results_element = document.getElementById(display_element);
                     results_element.innerHTML = "";
                     let table_element = document.createElement("table");
+                    let table_head_element = document.createElement("thead");
                     let row_element = document.createElement("tr");
                     Object.keys(results[0]).forEach(key =>{
                             let cell = document.createElement("th");
                             cell.innerHTML = key;
                             row_element.appendChild(cell);
                         });
-                    table_element.appendChild(row_element);
+                    table_head_element.appendChild(row_element);
+                    table_element.appendChild(table_head_element)
+
+                    let table_body_element = document.createElement("tbody");
                     results.forEach(row => {
                         let row_element = document.createElement("tr")
                         Object.values(row).forEach(value =>{
@@ -86,11 +101,16 @@
                             cell.innerHTML = value;
                             row_element.appendChild(cell);
                         })
-                        table_element.appendChild(row_element)
+                        table_body_element.appendChild(row_element)
                     });
+                    table_element.appendChild(table_body_element)
                     results_element.appendChild(table_element)
+                    document.getElementById("run").removeAttribute("aria-busy")    
                     
-                    document.getElementById(timer_element).innerHTML = `Took ${(Date.now() - start_time)/1000} s to run.`    
+                    if (timer_element != "") {
+                        document.getElementById(timer_element).classList.add("badge")
+                        document.getElementById(timer_element).innerHTML = `Took ${(Date.now() - start_time)/1000} s to run.`
+                    }
             }
 
             async function metadata(conn, display_element) {
@@ -109,8 +129,8 @@
 
                 
             }
-
-            var conn = await getConnection();
+            let ducklake_url = window.location.href.replace("overview.html", "catalog.ducklake");
+            document.getElementById("connection_command").innerHTML = `ATTACH 'ducklake:${ducklake_url}' as db; USE db;`
 
             // let connect = document.getElementById("connect")
             let overview_query = "SELECT s.schema_name, t.table_name, ts.record_count\
@@ -119,42 +139,36 @@
                                                         USING (schema_id)\
                                                         JOIN __ducklake_metadata_db.ducklake_table_stats ts\
                                                         USING (table_id)\
-                                                        WHERE s.schema_name != 'main';";
+                                                        WHERE s.schema_name != 'main' AND t.end_snapshot IS NULL;";
 
-            let ducklake_url = window.location.href.replace("overview.html", "catalog.ducklake");
-            document.getElementById("connection_command").innerHTML = `ATTACH 'ducklake:${ducklake_url}' as db; USE db;`
+            var conn = await getConnection();
             await attachDucklake(conn, ducklake_url)//document.getElementById('ducklake_url').value);
-            await fetch_info(conn, overview_query, "overview", "connect_timer")
-            // await metadata(conn, "overview")
-            // connect.addEventListener("click", async function(e) {
-            //     await fetch_info(conn, overview_query, "overview", "connect_timer")
-            // })
+            await fetch_info(conn, overview_query, "overview", "")
             let run = document.getElementById("run")
             run.addEventListener("click", e => fetch_info(conn, document.getElementById('query').value, "results", "run_timer"))
+            run.removeAttribute("disabled")
         </script>
     </head>
     <body>
-        <h1>Ducklake with Open Research Information</h1>
-        <p>This Ducklake contains a number of publically datasets in a format that can be queried right away. To do that you need to work with [DuckDB](https://duckdb.org) in any of the supported environments. You can connect with the following command:</p>
-        <pre><code id="connection_command"></code></pre>
-        <details>
-            <summary>Overview</summary>
+        <article class="card">
+            <h2>Ducklake with Open Research Information</h2>
             <div>
-                <!-- <input id="ducklake_url" type="text" value="https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts/catalog.ducklake" style="width: 800px"/> -->
-                <!-- <button id="connect">Connect</button> -->
-                 <div id="connect_timer"></div>
+                <p>This Ducklake contains a number of publically datasets in a format that can be queried right away. To do that you need to work with <a href="https://duckdb.org">DuckDB</a> in any of the supported environments. You can connect with the following command:</p>
+                <pre><code id="connection_command"></code></pre>
             </div>
+            <details>
+                <summary>Dataset overview</summary>
+                <div id="overview" class="table"></div>
+            </details>
+            <details>
+                <summary>Query the data right here</summary>
+                <div>
+                    <input id="query" type="text" value="SELECT * FROM openapc.apc LIMIT 10" style="width: 800px"/>
+                    <button id="run" disabled>Run</button> <span id="run_timer" class="outline"> </span>
+                </div>
 
-            <div id="overview"></div>
-        </details>
-        <details>
-            <summary>Query</summary>
-            <div>
-                <input id="query" type="text" value="SELECT * FROM openapc.apc LIMIT 10" style="width: 800px"/>
-                <button id="run">Run</button><div id="run_timer"></div>
-            </div>
-
-            <div id="results"></div>
-        </details>
+                <div id="results" class="table"></div>
+            </details>
+        </article>
     </body>
 </html>
