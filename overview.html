@@ -91,7 +91,182 @@
   </article>
 
   <script type="module">
-    // JS goes here in subsequent tasks
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function fmtSize(bytes) {
+  if (!bytes || bytes === 0) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 ** 2) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 ** 3) return (bytes / 1024 ** 2).toFixed(1) + ' MB';
+  return (bytes / 1024 ** 3).toFixed(2) + ' GB';
+}
+
+function fmtNum(n) {
+  if (n == null) return '—';
+  return Number(n).toLocaleString();
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function showError(msg) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className = 'error';
+}
+
+function clearError() {
+  const el = document.getElementById('status-msg');
+  el.textContent = '';
+  el.className = '';
+}
+
+// ── DuckDB ───────────────────────────────────────────────────────────────────
+
+import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.33.1-dev57.0/+esm";
+
+async function getDb() {
+  if (window._db) return window._db;
+  const bundle = await duckdb.selectBundle(duckdb.getJsDelivrBundles());
+  const workerUrl = URL.createObjectURL(
+    new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+  );
+  const worker = new Worker(workerUrl);
+  const db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), worker);
+  await db.instantiate(bundle.mainModule, bundle.pthreadWorker, () => {});
+  URL.revokeObjectURL(workerUrl);
+  window._db = db;
+  return db;
+}
+
+async function freshConn() {
+  // Always open a new connection (safe to open multiple read connections)
+  return (await getDb()).connect();
+}
+
+async function runQuery(conn, sql) {
+  const res = await conn.query(sql);
+  return res.toArray().map(r => r.toJSON());
+}
+
+async function attachCatalog(conn, catalogUrl) {
+  await conn.query("LOAD httpfs; LOAD ducklake;");
+  // Detach any previous attachment before re-attaching
+  try { await conn.query("DETACH db;"); } catch (_) {}
+  await conn.query(`ATTACH 'ducklake:${catalogUrl}' AS db; USE db;`);
+}
+
+// ── URL resolution ───────────────────────────────────────────────────────────
+
+function resolveCatalogUrl() {
+  const param = new URLSearchParams(window.location.search).get('catalog');
+  if (param) return param;
+  // Replace the last path segment with catalog.ducklake
+  return window.location.href.replace(/[^/]*$/, 'catalog.ducklake');
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+const state = {
+  conn: null,
+  schema: null,      // selected schema name (L3+)
+  tableId: null,     // selected table id (L4)
+  tableName: null,   // selected table name (L4)
+};
+
+// ── Connect ──────────────────────────────────────────────────────────────────
+
+async function connect(catalogUrl) {
+  clearError();
+  document.getElementById('content-area').innerHTML = '<p style="color:#888">Connecting…</p>';
+  document.getElementById('stat-row').innerHTML = '';
+  try {
+    if (state.conn) { try { state.conn.close(); } catch (_) {} }
+    state.conn = await freshConn();
+    await attachCatalog(state.conn, catalogUrl);
+    document.getElementById('btn-run').disabled = false;
+    // Show connection URL in settings input
+    document.getElementById('catalog-url').value = catalogUrl;
+    // Set the connection command for reference
+    await renderDashboard();
+  } catch (e) {
+    showError('Connection failed: ' + e.message);
+    document.getElementById('content-area').innerHTML = '';
+  }
+}
+
+// ── Query panel ──────────────────────────────────────────────────────────────
+
+function renderResultTable(rows, container) {
+  if (!rows || rows.length === 0) {
+    container.innerHTML = '<p style="color:#888">No results.</p>';
+    return;
+  }
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  Object.keys(rows[0]).forEach(k => {
+    const th = document.createElement('th');
+    th.textContent = k;
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    Object.values(row).forEach(v => {
+      const td = document.createElement('td');
+      td.textContent = v ?? '';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.innerHTML = '';
+  container.appendChild(table);
+}
+
+async function runUserQuery() {
+  if (!state.conn) return;
+  const sql = document.getElementById('query').value.trim();
+  if (!sql) return;
+  const resultsEl = document.getElementById('results');
+  const timerEl = document.getElementById('run-timer');
+  timerEl.textContent = '';
+  const t0 = Date.now();
+  try {
+    const rows = await runQuery(state.conn, sql);
+    renderResultTable(rows, resultsEl);
+    timerEl.textContent = `${((Date.now() - t0) / 1000).toFixed(2)} s`;
+  } catch (e) {
+    resultsEl.innerHTML = `<p style="color:#900;font-size:.85rem">${e.message}</p>`;
+    timerEl.textContent = '';
+  }
+}
+
+// ── Placeholder render (Tasks 3-6 will fill renderDashboard) ─────────────────
+
+async function renderDashboard() {
+  document.getElementById('content-area').innerHTML = '<p style="color:#888">Loading metadata…</p>';
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+
+const catalogUrl = resolveCatalogUrl();
+document.getElementById('catalog-url').value = catalogUrl;
+
+document.getElementById('btn-connect').addEventListener('click', () => {
+  const url = document.getElementById('catalog-url').value.trim();
+  if (url) connect(url);
+});
+
+document.getElementById('btn-run').addEventListener('click', runUserQuery);
+
+// Auto-connect on load
+connect(catalogUrl);
   </script>
 </body>
 </html>
