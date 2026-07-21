@@ -340,11 +340,74 @@ async function renderL2(conn) {
   document.getElementById('content-area').appendChild(grid);
 }
 
-// ── L3: Navigate to schema (Task 5 will render tables) ──────────────────────
+// ── L3: Table cards ─────────────────────────────────────────────────────────
+
+async function renderL3(conn, schemaName) {
+  const rows = await runQuery(conn, `
+    SELECT
+      t.table_id,
+      t.table_name,
+      COALESCE(ts.record_count,    0)    AS record_count,
+      COALESCE(ts.file_size_bytes, 0)    AS file_size_bytes,
+      sn.snapshot_time                   AS last_modified,
+      tag.value                          AS description
+    FROM __ducklake_metadata_db.ducklake_schema s
+    JOIN __ducklake_metadata_db.ducklake_table t
+      ON s.schema_id = t.schema_id AND t.end_snapshot IS NULL
+    JOIN __ducklake_metadata_db.ducklake_table_stats ts
+      ON t.table_id = ts.table_id
+    JOIN __ducklake_metadata_db.ducklake_snapshot sn
+      ON t.begin_snapshot = sn.snapshot_id
+    LEFT JOIN __ducklake_metadata_db.ducklake_tag tag
+      ON tag.object_id = t.table_id AND tag.key = 'comment' AND tag.end_snapshot IS NULL
+    WHERE s.schema_name = '${schemaName}'
+    ORDER BY t.table_name
+  `);
+
+  // Breadcrumb
+  const bc = document.getElementById('breadcrumb');
+  bc.innerHTML = `
+    <span class="crumb" id="bc-catalog">Catalog</span>
+    <span class="sep">›</span>
+    <span class="crumb">${schemaName}</span>
+  `;
+  bc.style.display = 'block';
+  document.getElementById('bc-catalog').addEventListener('click', () => renderDashboard());
+
+  const grid = document.createElement('div');
+  grid.className = 'card-grid';
+
+  rows.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'info-card';
+    card.innerHTML = `
+      <h3>${r.table_name}</h3>
+      ${r.description ? `<div class="card-desc">${r.description}</div>` : ''}
+      <div class="card-meta">
+        🔢 ${fmtNum(r.record_count)} records<br>
+        💾 ${fmtSize(r.file_size_bytes)}<br>
+        🕒 ${fmtDate(r.last_modified)}
+      </div>
+    `;
+    card.addEventListener('click', () => navigateToL4(schemaName, r.table_id, r.table_name));
+    grid.appendChild(card);
+  });
+
+  document.getElementById('content-area').innerHTML = '';
+  document.getElementById('content-area').appendChild(grid);
+}
 
 async function navigateToL3(schemaName) {
   state.schema = schemaName;
-  // Task 5 will render L3 here
+  state.tableId = null;
+  state.tableName = null;
+  await renderL3(state.conn, schemaName);
+}
+
+// Stub — Task 6 fills this in
+async function navigateToL4(schemaName, tableId, tableName) {
+  state.tableId = tableId;
+  state.tableName = tableName;
 }
 
 // ── Render dashboard (Tasks 3-6 progressive build) ──────────────────────────
