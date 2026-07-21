@@ -1,174 +1,97 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <link rel="stylesheet" href="https://unpkg.com/@knadh/oat/oat.min.css">
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DuckLake Overview</title>
+  <meta name="description" content="Interactive overview dashboard for a DuckLake catalog — browse schemas, tables and columns, and query data right in the browser.">
+  <link rel="stylesheet" href="https://unpkg.com/@knadh/oat/oat.min.css">
+  <style>
+    #surf-logo { float: right; width: 110px; margin: 0 0 1rem 1.5rem; }
+    .stat-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0 1.5rem; }
+    .stat-chip { background: #f4f4f4; border-radius: 6px; padding: 0.5rem 1rem; min-width: 120px; }
+    .stat-chip .label { font-size: 0.78rem; color: #666; text-transform: uppercase; letter-spacing: .04em; }
+    .stat-chip .value { font-size: 1.25rem; font-weight: 600; margin-top: 2px; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .info-card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem 1.2rem; cursor: pointer; transition: box-shadow .15s, background .15s; }
+    .info-card:hover { background: #f9f9f9; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .info-card h3 { margin: 0 0 0.6rem; font-size: 1.05rem; }
+    .info-card .card-meta { font-size: 0.82rem; color: #555; line-height: 1.7; }
+    .info-card .card-desc { font-size: 0.82rem; color: #444; margin-top: 0.4rem; font-style: italic; }
+    #breadcrumb { margin-bottom: 1rem; font-size: 0.9rem; color: #555; }
+    #breadcrumb .crumb { cursor: pointer; color: #0066cc; text-decoration: underline; }
+    #breadcrumb .crumb:last-child { cursor: default; color: #333; text-decoration: none; }
+    #breadcrumb .sep { margin: 0 0.4rem; }
+    .col-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .col-table th { text-align: left; padding: 0.5rem 0.75rem; background: #f4f4f4; border-bottom: 2px solid #ddd; }
+    .col-table td { padding: 0.45rem 0.75rem; border-bottom: 1px solid #eee; vertical-align: top; }
+    .col-table td:nth-child(2) { font-family: monospace; font-size: 0.85rem; color: #555; }
+    #status-msg { padding: 0.4rem 0.75rem; border-radius: 4px; font-size: 0.85rem; display: none; }
+    #status-msg.error { background: #fde; color: #900; display: block; }
+    #query-row { display: flex; gap: 0.5rem; margin: 0.5rem 0; align-items: center; }
+    #query { flex: 1; font-family: monospace; font-size: 0.9rem; }
+    #run-timer { font-size: 0.8rem; color: #666; }
+  </style>
+</head>
+<body>
+  <article>
+    <!-- SURF logo -->
+    <div id="surf-logo">
+      <?xml version="1.0" encoding="UTF-8"?>
+<svg width="236px" height="168px" viewBox="0 0 236 168" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>SURF</title>
+    <g id="Frame-Copy" stroke="none" fill="none" fill-rule="evenodd" stroke-width="1">
+        <g id="Laag_1" transform="translate(30, 30)">
+            <path d="M190.344,64.9185444 C198.996,64.9185444 206,72.1546879 206,81.044807 L206,91.3821549 C206,100.272274 198.996,107.508418 190.344,107.508418 L166.654,107.508418 C158.002,107.508418 150.998,100.272274 150.998,91.3821549 L150.998,84.9729992 C150.998,73.8086636 142.14,64.9185444 131.428,64.9185444 L19.57,64.9185444 C8.652,64.9185444 0,56.0284253 0,44.8640896 L0,20.0544548 C0,8.89011914 8.858,0 19.57,0 L131.428,0 C142.346,0 150.998,8.89011914 150.998,20.0544548 L150.998,44.8640896 C150.998,56.0284253 159.856,64.9185444 170.568,64.9185444 L190.344,64.9185444 Z" id="a_1_" fill="#000000"></path>
+            <path d="M124.836,36.8009583 C126.896,36.8009583 127.926,35.7672235 127.926,33.6997539 C127.926,31.6322844 126.896,30.3918026 124.836,30.3918026 L117.008,30.3918026 L117.008,24.1893939 L129.368,24.1893939 C131.428,24.1893939 132.458,23.1556592 132.458,20.8814426 C132.458,18.8139731 131.428,17.7802383 129.368,17.7802383 L113.712,17.7802383 C111.652,17.7802383 110.416,18.8139731 110.416,21.0881896 L110.416,43.8303548 C110.416,46.1045714 111.446,47.1383061 113.712,47.1383061 C115.772,47.1383061 117.008,46.1045714 117.008,43.8303548 L117.008,36.5942113 C117.008,36.8009583 124.836,36.8009583 124.836,36.8009583 L124.836,36.8009583 Z M99.086,36.1807174 C101.97,34.7334887 103.618,31.8390313 103.618,28.1175861 C103.618,22.1219244 99.292,17.7802383 93.112,17.7802383 L83.842,17.7802383 C81.782,17.7802383 80.546,18.8139731 80.546,21.0881896 L80.546,43.8303548 C80.546,46.1045714 81.576,47.1383061 83.842,47.1383061 C85.902,47.1383061 87.138,46.1045714 87.138,43.8303548 L87.138,37.8346931 L92.7,37.8346931 L95.996,44.8640896 C96.614,46.3113183 97.438,46.9315592 98.674,46.9315592 C100.322,46.9315592 102.382,45.6910774 102.382,43.8303548 C102.382,43.210114 102.176,42.5898731 101.97,41.9696322 L99.086,36.1807174 L99.086,36.1807174 Z M92.288,32.0457783 L86.726,32.0457783 L86.726,24.1893939 L92.288,24.1893939 C94.76,24.1893939 96.82,25.4298757 96.82,28.1175861 C96.82,30.8052966 94.76,32.0457783 92.288,32.0457783 Z M66.126,33.6997539 C66.126,38.248187 63.448,40.9358974 59.74,40.9358974 C56.032,40.9358974 53.354,38.248187 53.354,33.6997539 L53.354,20.8814426 C53.354,18.6072261 52.324,17.5734913 50.058,17.5734913 C47.998,17.5734913 46.762,18.6072261 46.762,20.8814426 L46.762,33.6997539 C46.762,42.1763792 52.324,47.5518001 59.74,47.5518001 C67.156,47.5518001 72.718,42.1763792 72.718,33.6997539 L72.718,20.8814426 C72.718,18.6072261 71.688,17.5734913 69.422,17.5734913 C67.362,17.5734913 66.126,18.6072261 66.126,20.8814426 L66.126,33.6997539 L66.126,33.6997539 Z M29.252,41.3493913 C26.78,41.3493913 24.926,40.7291505 23.69,40.3156566 C22.66,39.9021627 21.836,39.6954157 20.806,39.6954157 C18.952,39.6954157 17.922,40.9358974 17.922,42.79662 C17.922,45.8978244 24.102,47.5518001 29.458,47.5518001 C35.844,47.5518001 40.788,44.0371018 40.788,38.6616809 C40.788,33.6997539 37.492,31.4255374 33.99,30.1850557 L28.634,28.53108 C26.368,27.9108392 25.338,27.2905983 25.338,25.8433696 C25.338,24.3961409 27.604,23.5691531 29.458,23.5691531 C31.724,23.5691531 33.372,24.1893939 34.608,24.6028879 C35.432,24.8096348 36.256,25.2231287 37.286,25.2231287 C38.934,25.2231287 39.964,23.982647 39.964,22.1219244 C39.964,19.02072 34.402,17.3667444 29.458,17.3667444 C23.278,17.3667444 18.746,20.8814426 18.746,26.0501166 C18.746,30.3918026 21.836,32.8727661 25.132,33.9065009 L29.87,35.3537296 C32.342,36.1807174 34.196,36.8009583 34.196,38.248187 C33.784,40.3156566 31.312,41.3493913 29.252,41.3493913 L29.252,41.3493913 Z" id="Shape" fill="#FFFFFF" fill-rule="nonzero"></path>
+        </g>
+    </g>
+</svg>
+    </div>
 
-        <script type="module">
-            // This is reusing snippets of code from the DuckDB Iceberg browser (https://duckdb.org/2025/12/16/iceberg-in-the-browser)
+    <h1>DuckLake Overview</h1>
+    <p id="catalog-description" style="color:#555;margin-bottom:0.5rem"></p>
 
-            import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.33.1-dev57.0/+esm";
+    <!-- Settings / URL override -->
+    <details id="settings" style="margin-bottom:1rem;font-size:0.9rem">
+      <summary style="cursor:pointer;color:#0066cc">⚙ Connection settings</summary>
+      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;align-items:center">
+        <input id="catalog-url" type="text" style="flex:1;font-family:monospace;font-size:0.85rem" placeholder="https://…/catalog.ducklake" />
+        <button id="btn-connect">Connect</button>
+      </div>
+      <p style="font-size:0.8rem;color:#777;margin:0.4rem 0 0">
+        For local testing: paste the dev objectstore URL above and click Connect.
+      </p>
+    </details>
 
-            async function getDb() {
-                // @ts-ignore
-                if (window._db) return window._db;
-                const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-            
-                // Select a bundle based on browser checks
-                const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
-            
-                const worker_url = URL.createObjectURL(
-                    new Blob([`importScripts("${bundle.mainWorker}");`], {
-                        type: "text/javascript",
-                    })
-                );
-            
-                // Instantiate the asynchronous version of DuckDB-wasm
-                const worker = new Worker(worker_url);
+    <!-- L1: stat chips (filled by JS) -->
+    <div id="stat-row" class="stat-row"></div>
 
-                const logger = new duckdb.ConsoleLogger();
-                const db = new duckdb.AsyncDuckDB(logger, worker);
+    <!-- Breadcrumb (hidden at L2) -->
+    <nav id="breadcrumb" style="display:none"></nav>
 
-                await db.instantiate(bundle.mainModule, bundle.pthreadWorker, (progress) => {});
-                URL.revokeObjectURL(worker_url);
-                window._db = db;
-                return db;
-            }
+    <!-- Status / error message -->
+    <div id="status-msg"></div>
 
-            async function getConnection() {
-                const db = await getDb();
-                var conn = await db.connect();
-                return conn;
-            }
+    <!-- Content area: L2 / L3 / L4 swapped by JS -->
+    <div id="content-area">
+      <p style="color:#888">Connecting to DuckLake…</p>
+    </div>
 
-            async function attachDucklake(conn, ducklake_url) {
-                await executeQuery(conn, "LOAD httpfs;");
-                await executeQuery(conn, "LOAD ducklake;");
-                // await executeQuery(conn, "USE memory; DETACH db;");
-                await executeQuery(conn, "ATTACH 'ducklake:" + ducklake_url + "' as db; USE db;")
-            }
+    <!-- Query panel (always visible) -->
+    <details id="query-section" style="margin-top:2rem">
+      <summary>Query the data right here</summary>
+      <div id="query-row">
+        <input id="query" type="text" value="SELECT * FROM openapc.apc LIMIT 10" />
+        <button id="btn-run" disabled>Run</button>
+        <span id="run-timer"></span>
+      </div>
+      <div id="results"></div>
+    </details>
+  </article>
 
-            async function executeQuery(conn, query, setup_queries = "") {
-                    var error = null;
-                    const startTime = performance.now();
-                    var results = await conn.query(setup_queries + query).catch((e) => {error = e; console.log(e);});
-                    const runTime = performance.now() - startTime;
-                   
-                    return {results, error, runTime};
-            }
-
-            async function fetch_info(conn, query, display_element, timer_element) {
-                    var setup_queries = "";
-                    let start_time = Date.now();
-
-                    document.getElementById("run").setAttribute("aria-busy", "true")
-
-                    if (timer_element != "") {
-                        document.getElementById(timer_element).innerHTML = ""
-                        document.getElementById(timer_element).classList.remove("badge")
-                        document.getElementById(timer_element).removeAttribute("data-variant")
-                    }
-                        
-                    let res = await executeQuery(conn, query)
-                    console.log(res);
-
-                    if (res.error !== null) {
-                        document.getElementById(timer_element).innerHTML = res.error;
-                        document.getElementById(timer_element).classList.add("badge")
-                        document.getElementById(timer_element).setAttribute("data-variant", "danger")
-                        document.getElementById("run").removeAttribute("aria-busy")
-                        return    
-                    }
-                    
-                    let results = res.results.toArray().map((row) => row.toJSON());
-                    let results_element = document.getElementById(display_element);
-                    results_element.innerHTML = "";
-                    let table_element = document.createElement("table");
-                    let table_head_element = document.createElement("thead");
-                    let row_element = document.createElement("tr");
-                    Object.keys(results[0]).forEach(key =>{
-                            let cell = document.createElement("th");
-                            cell.innerHTML = key;
-                            row_element.appendChild(cell);
-                        });
-                    table_head_element.appendChild(row_element);
-                    table_element.appendChild(table_head_element)
-
-                    let table_body_element = document.createElement("tbody");
-                    results.forEach(row => {
-                        let row_element = document.createElement("tr")
-                        Object.values(row).forEach(value =>{
-                            let cell = document.createElement("td");
-                            cell.innerHTML = value;
-                            row_element.appendChild(cell);
-                        })
-                        table_body_element.appendChild(row_element)
-                    });
-                    table_element.appendChild(table_body_element)
-                    results_element.appendChild(table_element)
-                    document.getElementById("run").removeAttribute("aria-busy")    
-                    
-                    if (timer_element != "") {
-                        document.getElementById(timer_element).classList.add("badge")
-                        document.getElementById(timer_element).innerHTML = `Took ${(Date.now() - start_time)/1000} s to run.`
-                    }
-            }
-
-            async function metadata(conn, display_element) {
-                let overview_query = "SELECT s.schema_name, t.table_name, ts.record_count\
-                                                        FROM __ducklake_metadata_db.ducklake_schema s\
-                                                        JOIN __ducklake_metadata_db.ducklake_table t\
-                                                        USING (schema_id)\
-                                                        JOIN __ducklake_metadata_db.ducklake_table_stats ts\
-                                                        USING (table_id)\
-                                                        WHERE s.schema_name != 'main';";
-
-                let res = await executeQuery(conn, query)
-                console.log(res);
-                let results = res.results.toArray().map((row) => row.toJSON());
-
-
-                
-            }
-            let ducklake_url = window.location.href.replace("overview.html", "catalog.ducklake");
-            document.getElementById("connection_command").innerHTML = `ATTACH 'ducklake:${ducklake_url}' as db; USE db;`
-
-            // let connect = document.getElementById("connect")
-            let overview_query = "SELECT s.schema_name, t.table_name, ts.record_count\
-                                                        FROM __ducklake_metadata_db.ducklake_schema s\
-                                                        JOIN __ducklake_metadata_db.ducklake_table t\
-                                                        USING (schema_id)\
-                                                        JOIN __ducklake_metadata_db.ducklake_table_stats ts\
-                                                        USING (table_id)\
-                                                        WHERE s.schema_name != 'main' AND t.end_snapshot IS NULL;";
-
-            var conn = await getConnection();
-            await attachDucklake(conn, ducklake_url)//document.getElementById('ducklake_url').value);
-            await fetch_info(conn, overview_query, "overview", "")
-            let run = document.getElementById("run")
-            run.addEventListener("click", e => fetch_info(conn, document.getElementById('query').value, "results", "run_timer"))
-            run.removeAttribute("disabled")
-        </script>
-    </head>
-    <body>
-        <article class="card">
-            <h2>Ducklake with Open Research Information</h2>
-            <div>
-                <p>This Ducklake contains a number of publically datasets in a format that can be queried right away. To do that you need to work with <a href="https://duckdb.org">DuckDB</a> in any of the supported environments. You can connect with the following command:</p>
-                <pre><code id="connection_command"></code></pre>
-            </div>
-            <details>
-                <summary>Dataset overview</summary>
-                <div id="overview" class="table"></div>
-            </details>
-            <details>
-                <summary>Query the data right here</summary>
-                <div>
-                    <input id="query" type="text" value="SELECT * FROM openapc.apc LIMIT 10" style="width: 800px"/>
-                    <button id="run" disabled>Run</button> <span id="run_timer" class="outline"> </span>
-                </div>
-
-                <div id="results" class="table"></div>
-            </details>
-        </article>
-    </body>
+  <script type="module">
+    // JS goes here in subsequent tasks
+  </script>
+</body>
 </html>
