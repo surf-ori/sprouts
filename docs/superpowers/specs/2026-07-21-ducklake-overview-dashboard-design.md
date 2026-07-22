@@ -159,6 +159,16 @@ Can be dropped into any DuckLake project's root alongside `catalog.ducklake`.
 
 ---
 
+## Future Work / Backlog
+
+- ~~Restyle using the SURF design system instead of oat.css.~~ Done — see
+  `2026-07-22-surf-curve-tokens-reskin-design.md` (the real system turned out to be
+  SURF's "Curve" at `SURFnet/DesignSystem`, not `surf-ori/surf-design-system`).
+- Possible future step: real React + `@surfnet/curve-react` (shadcn) components
+  loaded from a CDN at runtime, if the tokens-only reskin turns out insufficient.
+
+---
+
 ## Git Workflow
 
 - Branch: `ducklake-overview`

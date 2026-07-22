@@ -7,30 +7,54 @@
   <meta name="description" content="Interactive overview dashboard for a DuckLake catalog — browse schemas, tables and columns, and query data right in the browser.">
   <link rel="stylesheet" href="https://unpkg.com/@knadh/oat/oat.min.css">
   <style>
+    /* SURF Curve design tokens — extracted from @surfnet/curve-react@0.2.2's
+       compiled dist/styles.css (light palette). Re-extract to update. */
+    :root {
+      --background: #fff;
+      --foreground: #0a0a0a;
+      --card: #fff;
+      --border: #d6d3d1;
+      --muted: #f5f5f4;
+      --muted-foreground: #525252;
+      --primary: #064bcb;
+      --accent: #eaf0fc;
+      --destructive: #dc2626;
+      --destructive-foreground: #fef2f2;
+      --link: #053eaa;
+      --font-sans: 'Source Sans 3', sans-serif;
+      --font-mono: 'Geist Mono', monospace;
+      --radius-sm: .375rem;
+      --radius-md: .5rem;
+    }
+    html { background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
     #surf-logo { float: right; width: 110px; margin: 0 0 1rem 1.5rem; }
     .stat-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0 1.5rem; }
-    .stat-chip { background: #f4f4f4; border-radius: 6px; padding: 0.5rem 1rem; min-width: 120px; }
-    .stat-chip .label { font-size: 0.78rem; color: #666; text-transform: uppercase; letter-spacing: .04em; }
+    .stat-chip { background: var(--muted); border-radius: var(--radius-sm); padding: 0.5rem 1rem; min-width: 120px; }
+    .stat-chip .label { font-size: 0.78rem; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .04em; }
     .stat-chip .value { font-size: 1.25rem; font-weight: 600; margin-top: 2px; }
     .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem; }
-    .info-card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem 1.2rem; cursor: pointer; transition: box-shadow .15s, background .15s; }
-    .info-card:hover { background: #f9f9f9; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .info-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.2rem; cursor: pointer; transition: box-shadow .15s, background .15s; }
+    .info-card:hover { background: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
     .info-card h3 { margin: 0 0 0.6rem; font-size: 1.05rem; }
-    .info-card .card-meta { font-size: 0.82rem; color: #555; line-height: 1.7; }
-    .info-card .card-desc { font-size: 0.82rem; color: #444; margin-top: 0.4rem; font-style: italic; }
-    #breadcrumb { margin-bottom: 1rem; font-size: 0.9rem; color: #555; }
-    #breadcrumb .crumb { cursor: pointer; color: #0066cc; text-decoration: underline; }
-    #breadcrumb .crumb:last-child { cursor: default; color: #333; text-decoration: none; }
+    .info-card .card-meta { font-size: 0.82rem; color: var(--muted-foreground); line-height: 1.7; }
+    .info-card .card-desc { font-size: 0.82rem; color: var(--foreground); margin-top: 0.4rem; font-style: italic; }
+    #breadcrumb { margin-bottom: 1rem; font-size: 0.9rem; color: var(--muted-foreground); }
+    #breadcrumb .crumb { cursor: pointer; color: var(--link); text-decoration: underline; }
+    #breadcrumb .crumb:last-child { cursor: default; color: var(--foreground); text-decoration: none; }
     #breadcrumb .sep { margin: 0 0.4rem; }
     .col-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    .col-table th { text-align: left; padding: 0.5rem 0.75rem; background: #f4f4f4; border-bottom: 2px solid #ddd; }
-    .col-table td { padding: 0.45rem 0.75rem; border-bottom: 1px solid #eee; vertical-align: top; }
-    .col-table td:nth-child(2) { font-family: monospace; font-size: 0.85rem; color: #555; }
-    #status-msg { padding: 0.4rem 0.75rem; border-radius: 4px; font-size: 0.85rem; display: none; }
-    #status-msg.error { background: #fde; color: #900; display: block; }
+    .col-table th { text-align: left; padding: 0.5rem 0.75rem; background: var(--muted); border-bottom: 2px solid var(--border); }
+    .col-table td { padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .col-table td:nth-child(2) { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted-foreground); }
+    #status-msg { padding: 0.4rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem; display: none; }
+    #status-msg.error { background: var(--destructive-foreground); color: var(--destructive); display: block; }
     #query-row { display: flex; gap: 0.5rem; margin: 0.5rem 0; align-items: center; }
-    #query { flex: 1; font-family: monospace; font-size: 0.9rem; }
-    #run-timer { font-size: 0.8rem; color: #666; }
+    #query { flex: 1; font-family: var(--font-mono); font-size: 0.9rem; }
+    #run-timer { font-size: 0.8rem; color: var(--muted-foreground); }
+    #results { overflow: auto; max-height: 420px; margin-top: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    #results table { border-collapse: collapse; font-size: 0.9rem; }
+    #results th, #results td { padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+    #results th { background: var(--muted); position: sticky; top: 0; }
   </style>
 </head>
 <body>
@@ -50,16 +74,16 @@
     </div>
 
     <h1>DuckLake Overview</h1>
-    <p id="catalog-description" style="color:#555;margin-bottom:0.5rem"></p>
+    <p id="catalog-description" style="color:var(--muted-foreground);margin-bottom:0.5rem"></p>
 
     <!-- Settings / URL override -->
     <details id="settings" style="margin-bottom:1rem;font-size:0.9rem">
-      <summary style="cursor:pointer;color:#0066cc">⚙ Connection settings</summary>
+      <summary style="cursor:pointer;color:var(--link)">⚙ Connection settings</summary>
       <div style="display:flex;gap:0.5rem;margin-top:0.5rem;align-items:center">
-        <input id="catalog-url" type="text" style="flex:1;font-family:monospace;font-size:0.85rem" placeholder="https://…/catalog.ducklake" />
+        <input id="catalog-url" type="text" style="flex:1;font-family:var(--font-mono);font-size:0.85rem" placeholder="https://…/catalog.ducklake" />
         <button id="btn-connect">Connect</button>
       </div>
-      <p style="font-size:0.8rem;color:#777;margin:0.4rem 0 0">
+      <p style="font-size:0.8rem;color:var(--muted-foreground);margin:0.4rem 0 0">
         For local testing: paste the dev objectstore URL above and click Connect.
       </p>
     </details>
@@ -69,8 +93,8 @@
 
     <!-- Connection command (filled by JS) -->
     <details id="connect-cmd" style="margin:0.5rem 0 1rem;font-size:0.85rem">
-      <summary style="cursor:pointer;color:#0066cc">DuckDB connection command</summary>
-      <pre style="background:#f4f4f4;padding:0.75rem;border-radius:4px;overflow-x:auto;margin-top:0.5rem"><code id="connection_command"></code></pre>
+      <summary style="cursor:pointer;color:var(--link)">DuckDB connection command</summary>
+      <pre style="background:var(--muted);padding:0.75rem;border-radius:var(--radius-sm);overflow-x:auto;margin-top:0.5rem"><code id="connection_command"></code></pre>
     </details>
 
     <!-- Breadcrumb (hidden at L2) -->
@@ -81,7 +105,7 @@
 
     <!-- Content area: L2 / L3 / L4 swapped by JS -->
     <div id="content-area">
-      <p style="color:#888">Connecting to DuckLake…</p>
+      <p style="color:var(--muted-foreground)">Connecting to DuckLake…</p>
     </div>
 
     <!-- Query panel (always visible) -->
@@ -100,6 +124,7 @@
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function fmtSize(bytes) {
+  if (typeof bytes === 'bigint') bytes = Number(bytes);
   if (!bytes || bytes === 0) return '—';
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 ** 2) return (bytes / 1024).toFixed(1) + ' KB';
@@ -120,6 +145,10 @@ function fmtDate(ts) {
   return d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+function quoteIdent(name) {
+  return '"' + String(name).replace(/"/g, '""') + '"';
+}
+
 function showError(msg) {
   const el = document.getElementById('status-msg');
   el.textContent = msg;
@@ -135,7 +164,7 @@ function clearError() {
 function setLoading(on) {
   if (on) {
     document.getElementById('content-area').innerHTML =
-      '<p style="color:#888;padding:1rem">⏳ Loading…</p>';
+      '<p style="color:var(--muted-foreground);padding:1rem">⏳ Loading…</p>';
   }
 }
 
@@ -196,7 +225,7 @@ const state = {
 
 async function connect(catalogUrl) {
   clearError();
-  document.getElementById('content-area').innerHTML = '<p style="color:#888">Connecting…</p>';
+  document.getElementById('content-area').innerHTML = '<p style="color:var(--muted-foreground)">Connecting…</p>';
   document.getElementById('stat-row').innerHTML = '';
   try {
     if (state.conn) { try { state.conn.close(); } catch (_) {} }
@@ -219,7 +248,7 @@ async function connect(catalogUrl) {
 
 function renderResultTable(rows, container) {
   if (!rows || rows.length === 0) {
-    container.innerHTML = '<p style="color:#888">No results.</p>';
+    container.innerHTML = '<p style="color:var(--muted-foreground)">No results.</p>';
     return;
   }
   const table = document.createElement('table');
@@ -260,7 +289,7 @@ async function runUserQuery() {
     renderResultTable(rows, resultsEl);
     timerEl.textContent = `${((Date.now() - t0) / 1000).toFixed(2)} s`;
   } catch (e) {
-    resultsEl.innerHTML = `<p style="color:#900;font-size:.85rem">${e.message}</p>`;
+    resultsEl.innerHTML = `<p style="color:var(--destructive);font-size:.85rem">${e.message}</p>`;
     timerEl.textContent = '';
   }
 }
@@ -436,8 +465,9 @@ async function renderL4(conn, schemaName, tableId, tableName) {
       ct.value AS description
     FROM __ducklake_metadata_db.ducklake_column c
     LEFT JOIN __ducklake_metadata_db.ducklake_column_tag ct
-      ON c.column_id = ct.column_id AND ct.key = 'comment' AND ct.end_snapshot IS NULL
-    WHERE c.table_id = ${tableId} AND c.end_snapshot IS NULL
+      ON c.column_id = ct.column_id AND ct.table_id = c.table_id
+      AND ct.key = 'comment' AND ct.end_snapshot IS NULL
+    WHERE c.table_id = ${tableId} AND c.end_snapshot IS NULL AND c.parent_column IS NULL
     ORDER BY c.column_order
   `);
 
@@ -455,10 +485,10 @@ async function renderL4(conn, schemaName, tableId, tableName) {
   document.getElementById('bc-schema').addEventListener('click', () => navigateToL3(schemaName));
 
   // Copy & run button
-  const previewSql = `SELECT * FROM ${schemaName}.${tableName} LIMIT 10`;
+  const previewSql = `SELECT * FROM ${quoteIdent(schemaName)}.${quoteIdent(tableName)} LIMIT 10`;
   const btnCopyRun = document.createElement('button');
   btnCopyRun.textContent = '▶ Copy & run: ' + previewSql;
-  btnCopyRun.style.cssText = 'margin-bottom:1rem;font-size:0.85rem;font-family:monospace';
+  btnCopyRun.style.cssText = 'margin-bottom:1rem;font-size:0.85rem;font-family:var(--font-mono)';
   btnCopyRun.addEventListener('click', () => {
     document.getElementById('query').value = previewSql;
     document.getElementById('query-section').open = true;
@@ -478,7 +508,7 @@ async function renderL4(conn, schemaName, tableId, tableName) {
     tr.innerHTML = `
       <td>${r.column_name}</td>
       <td>${r.column_type}</td>
-      <td style="color:#555">${r.description ?? ''}</td>
+      <td style="color:var(--muted-foreground)">${r.description ?? ''}</td>
     `;
     tbody.appendChild(tr);
   });
