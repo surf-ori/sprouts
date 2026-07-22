@@ -6,6 +6,7 @@
   <title>DuckLake Overview</title>
   <meta name="description" content="Interactive overview dashboard for a DuckLake catalog — browse schemas, tables and columns, and query data right in the browser.">
   <link rel="stylesheet" href="https://unpkg.com/@knadh/oat/oat.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
     /* SURF Curve design tokens — extracted from @surfnet/curve-react@0.2.2's
        compiled dist/styles.css (light palette). Re-extract to update. */
@@ -27,7 +28,11 @@
       --radius-md: .5rem;
     }
     html { background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
-    #surf-logo { float: right; width: 110px; margin: 0 0 1rem 1.5rem; }
+    #surf-logo { width: 110px; flex-shrink: 0; }
+    header.page-header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1rem; }
+    header.page-header h1 { margin: 0; }
+    #onboarding { color: var(--muted-foreground); margin: 0 0 1.5rem; }
+    #onboarding code { font-family: var(--font-mono); }
     .stat-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0 1.5rem; }
     .stat-chip { background: var(--muted); border-radius: var(--radius-sm); padding: 0.5rem 1rem; min-width: 120px; }
     .stat-chip .label { font-size: 0.78rem; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .04em; }
@@ -35,6 +40,8 @@
     .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem; }
     .info-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.2rem; cursor: pointer; transition: box-shadow .15s, background .15s; }
     .info-card:hover { background: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .info-card.selected { background: var(--accent); border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+    .info-card.unselected { opacity: .5; }
     .info-card h3 { margin: 0 0 0.6rem; font-size: 1.05rem; }
     .info-card .card-meta { font-size: 0.82rem; color: var(--muted-foreground); line-height: 1.7; }
     .info-card .card-desc { font-size: 0.82rem; color: var(--foreground); margin-top: 0.4rem; font-style: italic; }
@@ -58,10 +65,11 @@
   </style>
 </head>
 <body>
-  <article>
-    <!-- SURF logo -->
-    <div id="surf-logo">
-      <?xml version="1.0" encoding="UTF-8"?>
+  <article class="container">
+    <header class="page-header">
+      <!-- SURF logo -->
+      <div id="surf-logo">
+        <?xml version="1.0" encoding="UTF-8"?>
 <svg width="236px" height="168px" viewBox="0 0 236 168" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <title>SURF</title>
     <g id="Frame-Copy" stroke="none" fill="none" fill-rule="evenodd" stroke-width="1">
@@ -71,10 +79,20 @@
         </g>
     </g>
 </svg>
-    </div>
+      </div>
+      <div>
+        <h1>DuckLake Overview</h1>
+        <p id="catalog-description" style="color:var(--muted-foreground);margin:0.25rem 0 0"></p>
+      </div>
+    </header>
 
-    <h1>DuckLake Overview</h1>
-    <p id="catalog-description" style="color:var(--muted-foreground);margin-bottom:0.5rem"></p>
+    <p id="onboarding">
+      Browse a <a href="https://ducklake.select/" target="_blank" rel="noopener">DuckLake</a> catalog's
+      schemas, tables and columns, and query the data directly in your browser via DuckDB WASM —
+      no server required. Point this page at any catalog with the <code>?catalog=</code> URL
+      parameter, e.g.
+      <a href="overview.html?catalog=https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts-dev/catalog.ducklake">overview.html?catalog=https://objectstore.surf.nl/…/catalog.ducklake</a>.
+    </p>
 
     <!-- Settings / URL override -->
     <details id="settings" style="margin-bottom:1rem;font-size:0.9rem">
@@ -103,9 +121,13 @@
     <!-- Status / error message -->
     <div id="status-msg"></div>
 
-    <!-- Content area: L2 / L3 / L4 swapped by JS -->
+    <!-- Content area: schemas / datasets / columns, shown and hidden by JS as the drill-down opens -->
     <div id="content-area">
-      <p style="color:var(--muted-foreground)">Connecting to DuckLake…</p>
+      <section id="schemas-section">
+        <p style="color:var(--muted-foreground)">Connecting to DuckLake…</p>
+      </section>
+      <section id="datasets-section" style="display:none;margin-top:1.5rem"></section>
+      <section id="columns-section" style="display:none;margin-top:1.5rem"></section>
     </div>
 
     <!-- Query panel (always visible) -->
@@ -161,11 +183,8 @@ function clearError() {
   el.className = '';
 }
 
-function setLoading(on) {
-  if (on) {
-    document.getElementById('content-area').innerHTML =
-      '<p style="color:var(--muted-foreground);padding:1rem">⏳ Loading…</p>';
-  }
+function setLoading(container) {
+  container.innerHTML = '<p style="color:var(--muted-foreground);padding:1rem">⏳ Loading…</p>';
 }
 
 // ── DuckDB ───────────────────────────────────────────────────────────────────
@@ -221,11 +240,74 @@ const state = {
   tableName: null,   // selected table name (L4)
 };
 
+// ── Breadcrumb / accordion collapse ─────────────────────────────────────────
+// Single-path drill-down: one schema selected at a time, one dataset within
+// it. Re-selecting the active card (or a breadcrumb crumb) collapses back to
+// that level instead of navigating away from the cards above it.
+
+function markSelected(gridSelector, cardEl) {
+  document.querySelectorAll(`${gridSelector} .info-card`).forEach(c => {
+    c.classList.toggle('selected', c === cardEl);
+    c.classList.toggle('unselected', c !== cardEl);
+  });
+}
+
+function clearSelected(gridSelector) {
+  document.querySelectorAll(`${gridSelector} .info-card`).forEach(c => {
+    c.classList.remove('selected', 'unselected');
+  });
+}
+
+function renderBreadcrumb() {
+  const bc = document.getElementById('breadcrumb');
+  if (!state.schema) {
+    bc.style.display = 'none';
+    bc.innerHTML = '';
+    return;
+  }
+  bc.innerHTML = state.tableName
+    ? `<span class="crumb" id="bc-catalog">Catalog</span><span class="sep">›</span>
+       <span class="crumb" id="bc-schema">${state.schema}</span><span class="sep">›</span>
+       <span class="crumb">${state.tableName}</span>`
+    : `<span class="crumb" id="bc-catalog">Catalog</span><span class="sep">›</span>
+       <span class="crumb">${state.schema}</span>`;
+  bc.style.display = 'block';
+  document.getElementById('bc-catalog').addEventListener('click', collapseDatasets);
+  if (state.tableName) {
+    document.getElementById('bc-schema').addEventListener('click', collapseColumns);
+  }
+}
+
+function collapseDatasets() {
+  const datasetsEl = document.getElementById('datasets-section');
+  const columnsEl = document.getElementById('columns-section');
+  datasetsEl.style.display = 'none';
+  datasetsEl.innerHTML = '';
+  columnsEl.style.display = 'none';
+  columnsEl.innerHTML = '';
+  state.schema = null;
+  state.tableId = null;
+  state.tableName = null;
+  clearSelected('#schemas-section');
+  renderBreadcrumb();
+}
+
+function collapseColumns() {
+  const columnsEl = document.getElementById('columns-section');
+  columnsEl.style.display = 'none';
+  columnsEl.innerHTML = '';
+  state.tableId = null;
+  state.tableName = null;
+  clearSelected('#datasets-section');
+  renderBreadcrumb();
+}
+
 // ── Connect ──────────────────────────────────────────────────────────────────
 
 async function connect(catalogUrl) {
   clearError();
-  document.getElementById('content-area').innerHTML = '<p style="color:var(--muted-foreground)">Connecting…</p>';
+  collapseDatasets();
+  document.getElementById('schemas-section').innerHTML = '<p style="color:var(--muted-foreground)">Connecting…</p>';
   document.getElementById('stat-row').innerHTML = '';
   try {
     if (state.conn) { try { state.conn.close(); } catch (_) {} }
@@ -240,7 +322,7 @@ async function connect(catalogUrl) {
     await renderDashboard();
   } catch (e) {
     showError('Connection failed: ' + e.message);
-    document.getElementById('content-area').innerHTML = '';
+    document.getElementById('schemas-section').innerHTML = '';
   }
 }
 
@@ -372,24 +454,24 @@ async function renderL2(conn) {
     card.innerHTML = `
       <h3>${r.schema_name}</h3>
       <div class="card-meta">
-        📋 ${fmtNum(r.table_count)} dataset${r.table_count !== 1 ? 's' : ''}<br>
-        🔢 ${fmtNum(r.total_records)} records<br>
-        💾 ${fmtSize(r.total_size)}<br>
-        🕒 ${fmtDate(r.last_modified)}
+        <i class="fa-solid fa-table"></i> ${fmtNum(r.table_count)} dataset${r.table_count !== 1 ? 's' : ''}<br>
+        <i class="fa-solid fa-hashtag"></i> ${fmtNum(r.total_records)} records<br>
+        <i class="fa-solid fa-database"></i> ${fmtSize(r.total_size)}<br>
+        <i class="fa-solid fa-clock"></i> ${fmtDate(r.last_modified)}
       </div>
     `;
-    card.addEventListener('click', () => navigateToL3(r.schema_name));
+    card.addEventListener('click', () => selectSchema(card, r.schema_name));
     grid.appendChild(card);
   });
 
-  document.getElementById('breadcrumb').style.display = 'none';
-  document.getElementById('content-area').innerHTML = '';
-  document.getElementById('content-area').appendChild(grid);
+  const schemasEl = document.getElementById('schemas-section');
+  schemasEl.innerHTML = '';
+  schemasEl.appendChild(grid);
 }
 
 // ── L3: Table cards ─────────────────────────────────────────────────────────
 
-async function renderL3(conn, schemaName) {
+async function renderL3(conn, schemaName, container) {
   const rows = await runQuery(conn, `
     SELECT
       t.table_id,
@@ -411,16 +493,6 @@ async function renderL3(conn, schemaName) {
     ORDER BY t.table_name
   `);
 
-  // Breadcrumb
-  const bc = document.getElementById('breadcrumb');
-  bc.innerHTML = `
-    <span class="crumb" id="bc-catalog">Catalog</span>
-    <span class="sep">›</span>
-    <span class="crumb">${schemaName}</span>
-  `;
-  bc.style.display = 'block';
-  document.getElementById('bc-catalog').addEventListener('click', () => renderDashboard());
-
   const grid = document.createElement('div');
   grid.className = 'card-grid';
 
@@ -431,32 +503,45 @@ async function renderL3(conn, schemaName) {
       <h3>${r.table_name}</h3>
       ${r.description ? `<div class="card-desc">${r.description}</div>` : ''}
       <div class="card-meta">
-        🔢 ${fmtNum(r.record_count)} records<br>
-        💾 ${fmtSize(r.file_size_bytes)}<br>
-        🕒 ${fmtDate(r.last_modified)}
+        <i class="fa-solid fa-hashtag"></i> ${fmtNum(r.record_count)} records<br>
+        <i class="fa-solid fa-database"></i> ${fmtSize(r.file_size_bytes)}<br>
+        <i class="fa-solid fa-clock"></i> ${fmtDate(r.last_modified)}
       </div>
     `;
-    card.addEventListener('click', () => navigateToL4(schemaName, r.table_id, r.table_name));
+    card.addEventListener('click', () => selectDataset(card, schemaName, r.table_id, r.table_name));
     grid.appendChild(card);
   });
 
-  document.getElementById('content-area').innerHTML = '';
-  document.getElementById('content-area').appendChild(grid);
+  container.innerHTML = '';
+  container.appendChild(grid);
 }
 
-async function navigateToL3(schemaName) {
+async function selectSchema(cardEl, schemaName) {
+  if (state.schema === schemaName) {
+    collapseDatasets();
+    return;
+  }
+  markSelected('#schemas-section', cardEl);
   state.schema = schemaName;
   state.tableId = null;
   state.tableName = null;
-  setLoading(true);
+  renderBreadcrumb();
+
+  const datasetsEl = document.getElementById('datasets-section');
+  const columnsEl = document.getElementById('columns-section');
+  columnsEl.style.display = 'none';
+  columnsEl.innerHTML = '';
+  datasetsEl.style.display = 'block';
+  setLoading(datasetsEl);
+  clearError();
   try {
-    await renderL3(state.conn, schemaName);
+    await renderL3(state.conn, schemaName, datasetsEl);
   } catch (e) {
     showError('Failed to load schema: ' + e.message);
   }
 }
 
-async function renderL4(conn, schemaName, tableId, tableName) {
+async function renderL4(conn, schemaName, tableId, tableName, container) {
   const rows = await runQuery(conn, `
     SELECT
       c.column_order,
@@ -470,19 +555,6 @@ async function renderL4(conn, schemaName, tableId, tableName) {
     WHERE c.table_id = ${tableId} AND c.end_snapshot IS NULL AND c.parent_column IS NULL
     ORDER BY c.column_order
   `);
-
-  // Breadcrumb
-  const bc = document.getElementById('breadcrumb');
-  bc.innerHTML = `
-    <span class="crumb" id="bc-catalog">Catalog</span>
-    <span class="sep">›</span>
-    <span class="crumb" id="bc-schema">${schemaName}</span>
-    <span class="sep">›</span>
-    <span class="crumb">${tableName}</span>
-  `;
-  bc.style.display = 'block';
-  document.getElementById('bc-catalog').addEventListener('click', () => renderDashboard());
-  document.getElementById('bc-schema').addEventListener('click', () => navigateToL3(schemaName));
 
   // Copy & run button
   const previewSql = `SELECT * FROM ${quoteIdent(schemaName)}.${quoteIdent(tableName)} LIMIT 10`;
@@ -514,17 +586,27 @@ async function renderL4(conn, schemaName, tableId, tableName) {
   });
   table.appendChild(tbody);
 
-  document.getElementById('content-area').innerHTML = '';
-  document.getElementById('content-area').appendChild(btnCopyRun);
-  document.getElementById('content-area').appendChild(table);
+  container.innerHTML = '';
+  container.appendChild(btnCopyRun);
+  container.appendChild(table);
 }
 
-async function navigateToL4(schemaName, tableId, tableName) {
+async function selectDataset(cardEl, schemaName, tableId, tableName) {
+  if (state.tableId === tableId) {
+    collapseColumns();
+    return;
+  }
+  markSelected('#datasets-section', cardEl);
   state.tableId = tableId;
   state.tableName = tableName;
-  setLoading(true);
+  renderBreadcrumb();
+
+  const columnsEl = document.getElementById('columns-section');
+  columnsEl.style.display = 'block';
+  setLoading(columnsEl);
+  clearError();
   try {
-    await renderL4(state.conn, schemaName, tableId, tableName);
+    await renderL4(state.conn, schemaName, tableId, tableName, columnsEl);
   } catch (e) {
     showError('Failed to load table: ' + e.message);
   }
@@ -533,13 +615,14 @@ async function navigateToL4(schemaName, tableId, tableName) {
 // ── Render dashboard (Tasks 3-6 progressive build) ──────────────────────────
 
 async function renderDashboard() {
-  setLoading(true);
+  const schemasEl = document.getElementById('schemas-section');
+  setLoading(schemasEl);
   try {
     await renderL1(state.conn);
     await renderL2(state.conn);
   } catch (e) {
     showError('Failed to load catalog metadata: ' + e.message);
-    document.getElementById('content-area').innerHTML = '';
+    schemasEl.innerHTML = '';
   }
 }
 
