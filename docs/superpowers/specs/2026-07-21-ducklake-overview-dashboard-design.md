@@ -166,6 +166,18 @@ Can be dropped into any DuckLake project's root alongside `catalog.ducklake`.
   SURF's "Curve" at `SURFnet/DesignSystem`, not `surf-ori/surf-design-system`).
 - Possible future step: real React + `@surfnet/curve-react` (shadcn) components
   loaded from a CDN at runtime, if the tokens-only reskin turns out insufficient.
+- Schema-level and catalog-level descriptions don't show up in `overview.html`
+  because the underlying data doesn't exist yet, not because of a display gap.
+  Confirmed live: every row in `ducklake_tag` has an `object_id` matching a
+  *table*, none match a *schema* — there's no `comment-on-schema.sql` template
+  and `ingest-pipeline.py` never writes one. Likewise `ducklake_metadata` has no
+  `description` key set for the catalog. `overview.html`'s L1/L3 code already
+  queries for both patterns (table comments work today); L2 (schema cards) has
+  no such query at all since there's nothing to fetch. To close this: add a
+  `comment-on-schema.sql` template + a schema-level `description` field
+  somewhere in `sources/<name>/metadata.json` for `ingest-pipeline.py` to write,
+  plus a step that sets the catalog's `ducklake_metadata` `description` key;
+  then extend `overview.html`'s L1/L2 queries to read them.
 
 ---
 

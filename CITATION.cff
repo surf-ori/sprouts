@@ -6,7 +6,11 @@ authors:
   - family-names: Vanderfeesten
     given-names: Maurice
     orcid: "https://orcid.org/0000-0001-6397-4759"
-    affiliation: SURF
+    affiliation: "SURF (ROR: https://ror.org/009vhk114)"
+  - family-names: Bey
+    given-names: Till
+    orcid: "https://orcid.org/0000-0001-7509-9875"
+    affiliation: "SURF (ROR: https://ror.org/009vhk114)"
 # version mirrors pyproject.toml's current package version. This project has no
 # tagged GitHub release or Zenodo deposition yet, so date-released and doi are
 # intentionally omitted rather than guessed — fill them in once the first
