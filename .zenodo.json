@@ -1,0 +1,92 @@
+{
+  "title": "Sprouts",
+  "description": "<p>A light-weight data lakehouse for open research information, built on <a href=\"https://ducklake.select\">DuckLake</a>. Combines several open scholarly datasets — OpenAlex, the OpenAIRE Graph, Dutch institutional CRIS records, OpenAPC, and a Dutch-organisations reference table — into one queryable DuckLake catalog, plus a standalone browser app to explore it without installing anything.</p><p>Live, browsable view: <a href=\"https://surf-ori.github.io/sprouts/\">https://surf-ori.github.io/sprouts/</a></p><table><caption>Data sources loaded into the catalog</caption><thead><tr><th>Schema</th><th>Source</th><th>Description</th></tr></thead><tbody><tr><td><code>openalex</code></td><td>OpenAlex</td><td>Fully open catalog of the global research system (works, authors, institutions, funders, topics, …).</td></tr><tr><td><code>openaire</code>, <code>openaire-11.1.1</code></td><td>OpenAIRE Graph</td><td>Aggregated European open-science graph (publications, datasets, software, organizations, projects, …). <code>openaire-11.1.1</code> is a specific pinned Graph release.</td></tr><tr><td><code>cris</code></td><td>Dutch institutional CRIS systems</td><td>Publication metadata harvested via OAI-PMH from Dutch institutions' CRIS systems (Pure/DSpace), using the OpenAIRE CERIF profile.</td></tr><tr><td><code>openapc</code></td><td>OpenAPC</td><td>Article/book processing charges (APCs/BPCs) and transformative-agreement costs, voluntarily reported by institutions.</td></tr><tr><td><code>nl-orgs</code></td><td>SURF ORI baseline (Zenodo)</td><td>Reference table of Dutch research organisations.</td></tr><tr><td><code>pid2portal</code></td><td>Derived, computed in this repo</td><td>OpenAlex/OpenAIRE works filtered to at least one author affiliated with a Dutch organisation — not a raw source.</td></tr></tbody></table>",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "eupl-1.2",
+  "creators": [
+    {
+      "name": "Vanderfeesten, Maurice",
+      "orcid": "0000-0001-6397-4759",
+      "affiliation": "SURF"
+    }
+  ],
+  "keywords": [
+    "DuckLake",
+    "open research information",
+    "research data lakehouse",
+    "OpenAlex",
+    "OpenAIRE",
+    "CRIS",
+    "OpenAPC",
+    "Netherlands",
+    "PID",
+    "open science"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://surf-ori.github.io/sprouts/",
+      "relation": "isSupplementedBy",
+      "resource_type": "software-computationalnotebook",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://openalex.org",
+      "relation": "isDerivedFrom",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://graph.openaire.eu/",
+      "relation": "isDerivedFrom",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://openaire-guidelines-for-cris-managers.readthedocs.io/en/latest/",
+      "relation": "isDerivedFrom",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://www.openapc.net",
+      "relation": "isDerivedFrom",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://zenodo.org/records/18957154",
+      "relation": "isDerivedFrom",
+      "resource_type": "dataset",
+      "scheme": "url"
+    }
+  ],
+  "communities": [
+    {
+      "identifier": "surf"
+    }
+  ],
+  "custom": {
+    "code:codeRepository": "https://github.com/surf-ori/sprouts",
+    "code:programmingLanguage": [
+      {
+        "id": "python",
+        "title": {
+          "en": "Python"
+        }
+      },
+      {
+        "id": "javascript",
+        "title": {
+          "en": "JavaScript"
+        }
+      }
+    ],
+    "code:developmentStatus": {
+      "id": "active",
+      "title": {
+        "en": "Active"
+      }
+    }
+  }
+}

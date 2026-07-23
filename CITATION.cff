@@ -1,0 +1,50 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Sprouts"
+type: software
+authors:
+  - family-names: Vanderfeesten
+    given-names: Maurice
+    orcid: "https://orcid.org/0000-0001-6397-4759"
+    affiliation: SURF
+# version mirrors pyproject.toml's current package version. This project has no
+# tagged GitHub release or Zenodo deposition yet, so date-released and doi are
+# intentionally omitted rather than guessed — fill them in once the first
+# release/deposition exists (see the zenodo-github-release-sync skill).
+version: 0.1.0
+url: "https://surf-ori.github.io/sprouts/"
+repository-code: "https://github.com/surf-ori/sprouts"
+license: EUPL-1.2
+keywords:
+  - DuckLake
+  - open research information
+  - research data lakehouse
+  - OpenAlex
+  - OpenAIRE
+  - CRIS
+  - OpenAPC
+  - Netherlands
+  - PID
+  - open science
+abstract: >-
+  A light-weight data lakehouse for open research information, built on
+  DuckLake. Combines several open scholarly datasets — OpenAlex, the OpenAIRE
+  Graph, Dutch institutional CRIS records, OpenAPC, and a Dutch-organisations
+  reference table — into one queryable DuckLake catalog, plus a standalone
+  browser app to explore it without installing anything.
+references:
+- type: data
+  title: OpenAlex
+  url: https://openalex.org
+- type: data
+  title: OpenAIRE Graph
+  url: https://graph.openaire.eu/
+- type: data
+  title: OpenAIRE Guidelines for CRIS Managers (CERIF profile)
+  url: https://openaire-guidelines-for-cris-managers.readthedocs.io/en/latest/
+- type: data
+  title: OpenAPC
+  url: https://www.openapc.net
+- type: data
+  title: SURF ORI baseline (Dutch research organisations)
+  url: https://zenodo.org/records/18957154
