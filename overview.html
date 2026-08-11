@@ -49,6 +49,7 @@
     #breadcrumb .crumb:hover { color: var(--foreground); }
     #breadcrumb .crumb:last-child { cursor: default; color: var(--foreground); }
     #breadcrumb .sep { margin: 0 0.5rem; font-size: 0.75rem; color: var(--muted-foreground); }
+    #breadcrumb .crumb i { font-size: 0.75rem; margin-right: 0.3rem; }
     .col-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .col-table th { text-align: left; padding: 0.5rem 0.75rem; background: var(--muted); border-bottom: 2px solid var(--border); }
     .col-table td { padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -116,7 +117,11 @@
     <!-- Content area: catalog / schemas / datasets / columns, shown and hidden by JS as the drill-down opens -->
     <div id="content-area">
       <section id="catalog-section">
-        <p style="color:var(--muted-foreground)">Connecting to DuckLake…</p>
+        <h2>Catalog</h2>
+        <p class="section-hint">Select a card to drill down.</p>
+        <div id="catalog-content">
+          <p style="color:var(--muted-foreground)">Connecting to DuckLake…</p>
+        </div>
       </section>
       <section id="schemas-section" style="margin-top:1.5rem">
         <h2>Schemas</h2>
@@ -267,14 +272,17 @@ function clearSelected(gridSelector) {
 function renderBreadcrumb() {
   const bc = document.getElementById('breadcrumb');
   const rootLabel = state.catalogName || 'Catalog';
+  const sep = `<span class="sep"><i class="fa-solid fa-chevron-right"></i></span>`;
+  const catalogCrumb = `<span class="crumb" id="bc-catalog"><i class="fa-solid fa-database"></i> ${rootLabel}</span>`;
+  const schemaCrumb = `<span class="crumb" id="bc-schema"><i class="fa-solid fa-layer-group"></i> ${state.schema}</span>`;
+  const schemaCrumbFinal = `<span class="crumb"><i class="fa-solid fa-layer-group"></i> ${state.schema}</span>`;
+  const tableCrumb = `<span class="crumb"><i class="fa-solid fa-table"></i> ${state.tableName}</span>`;
+
   bc.innerHTML = state.tableName
-    ? `<span class="crumb" id="bc-catalog">${rootLabel}</span><span class="sep"><i class="fa-solid fa-chevron-right"></i></span>
-       <span class="crumb" id="bc-schema">${state.schema}</span><span class="sep"><i class="fa-solid fa-chevron-right"></i></span>
-       <span class="crumb">${state.tableName}</span>`
+    ? `${catalogCrumb}${sep}${schemaCrumb}${sep}${tableCrumb}`
     : state.schema
-    ? `<span class="crumb" id="bc-catalog">${rootLabel}</span><span class="sep"><i class="fa-solid fa-chevron-right"></i></span>
-       <span class="crumb">${state.schema}</span>`
-    : `<span class="crumb" id="bc-catalog">${rootLabel}</span>`;
+    ? `${catalogCrumb}${sep}${schemaCrumbFinal}`
+    : catalogCrumb;
   bc.style.display = 'block';
   document.getElementById('bc-catalog').addEventListener('click', collapseDatasets);
   if (state.tableName) {
@@ -323,7 +331,7 @@ async function connect(catalogUrl) {
   clearError();
   collapseDatasets();
   document.getElementById('schemas-section').style.display = 'block';
-  document.getElementById('catalog-section').innerHTML = '<p style="color:var(--muted-foreground)">Connecting…</p>';
+  document.getElementById('catalog-content').innerHTML = '<p style="color:var(--muted-foreground)">Connecting…</p>';
   document.getElementById('schemas-grid').innerHTML = '';
   try {
     if (state.conn) { try { state.conn.close(); } catch (_) {} }
@@ -338,7 +346,7 @@ async function connect(catalogUrl) {
     await renderDashboard();
   } catch (e) {
     showError('Connection failed: ' + e.message);
-    document.getElementById('catalog-section').innerHTML = '';
+    document.getElementById('catalog-content').innerHTML = '';
   }
 }
 
@@ -441,9 +449,9 @@ async function renderL1(conn) {
   `;
   card.addEventListener('click', () => toggleCatalog(card));
 
-  const catalogSection = document.getElementById('catalog-section');
-  catalogSection.innerHTML = '';
-  catalogSection.appendChild(card);
+  const catalogContent = document.getElementById('catalog-content');
+  catalogContent.innerHTML = '';
+  catalogContent.appendChild(card);
 
   renderBreadcrumb();
 }
