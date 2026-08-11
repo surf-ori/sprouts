@@ -51,9 +51,15 @@ published catalog on SURF object store ──> overview.html (DuckDB-WASM, in-br
   everything else (CSS, JS, the SURF logo) is inline, no build step, no server needed. It resolves the
   catalog to open from a `?catalog=` URL parameter (falling back to a `catalog.ducklake` file next to
   itself if absent), attaches with `ATTACH 'ducklake:<url>' AS db`, and renders a schemas → datasets →
-  columns single-path accordion drill-down plus a free-form SQL query box. See
-  `docs/superpowers/specs/` for the design history (dashboard build, SURF Curve token restyle, layout
-  pass).
+  columns single-path drill-down (main content area + a synced sidebar tree, breadcrumb, shareable URL
+  state). The Columns section profiles each column live (type, description, distinct/null/min-max,
+  histogram) and doubles as a Query Builder — click rows to construct a `SELECT` (multi-select,
+  nested-column-aware, substring search, distinct, limit) without writing SQL. "Apply this Query"
+  hands that off to a separate Query Runner, the only place a query actually executes; running it
+  there commits the query text to a `?query=` URL param and exposes a "Share Query" button, so
+  specific queries — not just table selections — are bookmarkable/shareable. See
+  `.claude/skills/developing-overview-html/` for the DuckLake/SQL/testing gotchas hit building this,
+  and `docs/superpowers/specs/` for the design history of each build phase.
 - **`index.html`** — redirects to `overview.html` with this project's default catalog URL baked in;
   it's the file GitHub Pages actually serves at the repo root.
 - **`notebooks/overview.py`** — an earlier, marimo-native prototype of the catalog browser (tabs per

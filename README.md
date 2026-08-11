@@ -17,6 +17,28 @@ point the same page at *any* DuckLake catalog by passing its URL as a query para
 overview.html?catalog=https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts/catalog.ducklake
 ```
 
+![overview.html: sidebar navigation, catalog/schema drill-down, and per-column profiling](docs/screenshots/overview-html.png)
+
+## overview.html features
+
+- **Catalog → schemas → datasets → columns drill-down**, in both the main content area and a
+  synced sidebar tree, with a breadcrumb and shareable/bookmarkable URL state
+  (`?catalog=&schema=&table=`).
+- **Columns explorer** — every column with a type icon, its comment/description (if the catalog
+  has one), and an approximate profile (distinct count, % null, min–max, a histogram for
+  numeric/temporal columns) sampled live from the data. Struct/list columns expand in place to
+  show their nested fields.
+- **Query Builder** — click column rows (including nested ones) to build a `SELECT` without
+  writing SQL: multi-select columns, a distinct-values toggle, a case-insensitive substring search
+  against the last column you clicked (including values nested inside lists), and a row limit. A
+  live preview shows the generated query as you go.
+- **Query Runner** — an editable query box (seeded from the Query Builder or written by hand) that
+  actually executes, with sortable/filterable results, CSV export, and a "Share Query" button that
+  copies a message plus a URL with the query baked into it — so a specific query is bookmarkable
+  and shareable, not just the table you started from.
+- **No server, no build step** — a single HTML file; DuckDB-WASM runs the SQL entirely in your
+  browser via a CDN import.
+
 ## What is DuckLake?
 
 [DuckLake](https://ducklake.select) is an open table format (like Iceberg or Delta Lake) that stores
@@ -30,7 +52,7 @@ including in-browser via DuckDB-WASM, which is exactly what `overview.html` does
 
 | Path | What it is |
 |---|---|
-| `overview.html` | Standalone browser app for exploring a DuckLake catalog — schemas → datasets → columns drill-down, plus a live SQL query box. Single self-contained file (DuckDB-WASM loaded from a CDN at runtime); no build step, no server. |
+| `overview.html` | Standalone browser app for exploring a DuckLake catalog — schemas → datasets → columns drill-down, a click-to-build Query Builder, and a Query Runner with export/share. Single self-contained file (DuckDB-WASM loaded from a CDN at runtime); no build step, no server. See "overview.html features" above, and `.claude/skills/developing-overview-html/` if you're changing it. |
 | `index.html` | Redirects to `overview.html` with this project's default catalog URL pre-filled — the entry point GitHub Pages serves. |
 | `ingest-pipeline.py` | [marimo](https://marimo.io) notebook/CLI that builds and updates the DuckLake catalog: init the catalog, download a source's raw files, convert them to Parquet, load them into DuckLake, attach table/column comments, and (optionally) freeze + upload a snapshot to the object store. |
 | `notebooks/overview.py` | An earlier, marimo-native prototype of the catalog browser (tabs per schema, accordion per table) — superseded for end users by `overview.html`, kept for reference/local exploration. |
