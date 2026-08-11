@@ -36,10 +36,6 @@
     #onboarding code { font-family: var(--font-mono); }
     #content-area section > h2 { margin-bottom: 0.25rem; }
     #content-area .section-hint { color: var(--muted-foreground); font-size: 0.85rem; margin: 0 0 0.75rem; }
-    .stat-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0 1.5rem; }
-    .stat-chip { background: var(--muted); border-radius: var(--radius-sm); padding: 0.5rem 1rem; min-width: 120px; }
-    .stat-chip .label { font-size: 0.78rem; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .04em; }
-    .stat-chip .value { font-size: 1.25rem; font-weight: 600; margin-top: 2px; }
     .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem; }
     .info-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.2rem; cursor: pointer; transition: box-shadow .15s, background .15s; }
     .info-card:hover { background: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
@@ -48,10 +44,11 @@
     .info-card h3 { margin: 0 0 0.6rem; font-size: 1.05rem; }
     .info-card .card-meta { font-size: 0.82rem; color: var(--muted-foreground); line-height: 1.7; }
     .info-card .card-desc { font-size: 0.82rem; color: var(--foreground); margin-top: 0.4rem; font-style: italic; }
-    #breadcrumb { margin-bottom: 1rem; font-size: 0.9rem; color: var(--muted-foreground); }
-    #breadcrumb .crumb { cursor: pointer; color: var(--link); text-decoration: underline; }
-    #breadcrumb .crumb:last-child { cursor: default; color: var(--foreground); text-decoration: none; }
-    #breadcrumb .sep { margin: 0 0.4rem; }
+    #breadcrumb { margin: 1rem 0; font-size: 0.875rem; color: var(--muted-foreground); }
+    #breadcrumb .crumb { cursor: pointer; transition: color .15s; }
+    #breadcrumb .crumb:hover { color: var(--foreground); }
+    #breadcrumb .crumb:last-child { cursor: default; color: var(--foreground); }
+    #breadcrumb .sep { margin: 0 0.5rem; font-size: 0.75rem; color: var(--muted-foreground); }
     .col-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .col-table th { text-align: left; padding: 0.5rem 0.75rem; background: var(--muted); border-bottom: 2px solid var(--border); }
     .col-table td { padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -85,7 +82,6 @@
       </div>
       <div>
         <h1>DuckLake Overview</h1>
-        <p id="catalog-description" style="color:var(--muted-foreground);margin:0.25rem 0 0"></p>
       </div>
     </header>
 
@@ -107,31 +103,25 @@
       <p style="font-size:0.8rem;color:var(--muted-foreground);margin:0.4rem 0 0">
         For local testing: paste the dev objectstore URL above and click Connect.
       </p>
+      <p style="font-size:0.8rem;color:var(--muted-foreground);margin:0.75rem 0 0.25rem">DuckDB connection command:</p>
+      <pre style="background:var(--muted);padding:0.75rem;border-radius:var(--radius-sm);overflow-x:auto;margin:0"><code id="connection_command"></code></pre>
     </details>
 
-    <!-- L1: stat chips (filled by JS) -->
-    <div id="stat-row" class="stat-row"></div>
-
-    <!-- Connection command (filled by JS) -->
-    <details id="connect-cmd" style="margin:0.5rem 0 1rem;font-size:0.85rem">
-      <summary style="cursor:pointer;color:var(--link)">DuckDB connection command</summary>
-      <pre style="background:var(--muted);padding:0.75rem;border-radius:var(--radius-sm);overflow-x:auto;margin-top:0.5rem"><code id="connection_command"></code></pre>
-    </details>
-
-    <!-- Breadcrumb (hidden at L2) -->
+    <!-- Breadcrumb (always visible once connected) -->
     <nav id="breadcrumb" style="display:none"></nav>
 
     <!-- Status / error message -->
     <div id="status-msg"></div>
 
-    <!-- Content area: schemas / datasets / columns, shown and hidden by JS as the drill-down opens -->
+    <!-- Content area: catalog / schemas / datasets / columns, shown and hidden by JS as the drill-down opens -->
     <div id="content-area">
-      <section id="schemas-section">
+      <section id="catalog-section">
+        <p style="color:var(--muted-foreground)">Connecting to DuckLake…</p>
+      </section>
+      <section id="schemas-section" style="margin-top:1.5rem">
         <h2>Schemas</h2>
         <p class="section-hint">Select a card to drill down.</p>
-        <div id="schemas-grid">
-          <p style="color:var(--muted-foreground)">Connecting to DuckLake…</p>
-        </div>
+        <div id="schemas-grid"></div>
       </section>
       <section id="datasets-section" style="display:none;margin-top:1.5rem">
         <h2>Datasets</h2>
@@ -249,15 +239,17 @@ function resolveCatalogUrl() {
 
 const state = {
   conn: null,
+  catalogName: null, // catalog 'name' metadata key, if set (falls back to "Catalog")
   schema: null,      // selected schema name (L3+)
   tableId: null,     // selected table id (L4)
   tableName: null,   // selected table name (L4)
 };
 
 // ── Breadcrumb / accordion collapse ─────────────────────────────────────────
-// Single-path drill-down: one schema selected at a time, one dataset within
-// it. Re-selecting the active card (or a breadcrumb crumb) collapses back to
-// that level instead of navigating away from the cards above it.
+// Single-path drill-down: the catalog itself is the root card, then one
+// schema selected at a time, one dataset within it. Re-selecting the active
+// card (or a breadcrumb crumb) collapses back to that level instead of
+// navigating away from the cards above it.
 
 function markSelected(gridSelector, cardEl) {
   document.querySelectorAll(`${gridSelector} .info-card`).forEach(c => {
@@ -274,21 +266,33 @@ function clearSelected(gridSelector) {
 
 function renderBreadcrumb() {
   const bc = document.getElementById('breadcrumb');
-  if (!state.schema) {
-    bc.style.display = 'none';
-    bc.innerHTML = '';
-    return;
-  }
+  const rootLabel = state.catalogName || 'Catalog';
   bc.innerHTML = state.tableName
-    ? `<span class="crumb" id="bc-catalog">Catalog</span><span class="sep">›</span>
-       <span class="crumb" id="bc-schema">${state.schema}</span><span class="sep">›</span>
+    ? `<span class="crumb" id="bc-catalog">${rootLabel}</span><span class="sep"><i class="fa-solid fa-chevron-right"></i></span>
+       <span class="crumb" id="bc-schema">${state.schema}</span><span class="sep"><i class="fa-solid fa-chevron-right"></i></span>
        <span class="crumb">${state.tableName}</span>`
-    : `<span class="crumb" id="bc-catalog">Catalog</span><span class="sep">›</span>
-       <span class="crumb">${state.schema}</span>`;
+    : state.schema
+    ? `<span class="crumb" id="bc-catalog">${rootLabel}</span><span class="sep"><i class="fa-solid fa-chevron-right"></i></span>
+       <span class="crumb">${state.schema}</span>`
+    : `<span class="crumb" id="bc-catalog">${rootLabel}</span>`;
   bc.style.display = 'block';
   document.getElementById('bc-catalog').addEventListener('click', collapseDatasets);
   if (state.tableName) {
     document.getElementById('bc-schema').addEventListener('click', collapseColumns);
+  }
+}
+
+function toggleCatalog(cardEl) {
+  const schemasSection = document.getElementById('schemas-section');
+  const willExpand = schemasSection.style.display === 'none';
+  if (willExpand) {
+    schemasSection.style.display = 'block';
+    cardEl.classList.add('selected');
+    renderBreadcrumb();
+  } else {
+    schemasSection.style.display = 'none';
+    cardEl.classList.remove('selected');
+    collapseDatasets();
   }
 }
 
@@ -318,8 +322,9 @@ function collapseColumns() {
 async function connect(catalogUrl) {
   clearError();
   collapseDatasets();
-  document.getElementById('schemas-grid').innerHTML = '<p style="color:var(--muted-foreground)">Connecting…</p>';
-  document.getElementById('stat-row').innerHTML = '';
+  document.getElementById('schemas-section').style.display = 'block';
+  document.getElementById('catalog-section').innerHTML = '<p style="color:var(--muted-foreground)">Connecting…</p>';
+  document.getElementById('schemas-grid').innerHTML = '';
   try {
     if (state.conn) { try { state.conn.close(); } catch (_) {} }
     state.conn = await freshConn();
@@ -333,7 +338,7 @@ async function connect(catalogUrl) {
     await renderDashboard();
   } catch (e) {
     showError('Connection failed: ' + e.message);
-    document.getElementById('schemas-grid').innerHTML = '';
+    document.getElementById('catalog-section').innerHTML = '';
   }
 }
 
@@ -390,15 +395,19 @@ async function runUserQuery() {
 // ── L1: Catalog stats ────────────────────────────────────────────────────────
 
 async function renderL1(conn) {
-  // Catalog description
+  // Catalog name/description — custom metadata keys, both optional (name is a
+  // sibling convention to description, not part of DuckLake's pre-defined key list)
+  let catalogName = null, catalogDesc = null;
   try {
-    const desc = await runQuery(conn,
-      `SELECT value FROM __ducklake_metadata_db.ducklake_metadata WHERE key = 'description' LIMIT 1`
+    const meta = await runQuery(conn,
+      `SELECT key, value FROM __ducklake_metadata_db.ducklake_metadata WHERE key IN ('name', 'description')`
     );
-    if (desc.length > 0) {
-      document.getElementById('catalog-description').textContent = desc[0].value;
+    for (const m of meta) {
+      if (m.key === 'name') catalogName = m.value;
+      if (m.key === 'description') catalogDesc = m.value;
     }
-  } catch (_) {} // description is optional
+  } catch (_) {} // both optional
+  state.catalogName = catalogName;
 
   // Aggregate stats
   const rows = await runQuery(conn, `
@@ -417,21 +426,26 @@ async function renderL1(conn) {
   `);
 
   const r = rows[0] ?? {};
-  const chips = [
-    { label: 'Last Modified', value: fmtDate(r.last_modified) },
-    { label: 'Schemas',       value: fmtNum(r.schema_count)   },
-    { label: 'Datasets',      value: fmtNum(r.table_count)    },
-    { label: 'Total Records', value: fmtNum(r.total_records)  },
-    { label: 'Total Size',    value: fmtSize(r.total_size)    },
-  ];
-
-  const row = document.getElementById('stat-row');
-  row.innerHTML = chips.map(c => `
-    <div class="stat-chip">
-      <div class="label">${c.label}</div>
-      <div class="value">${c.value}</div>
+  const card = document.createElement('div');
+  card.className = 'info-card selected';
+  card.innerHTML = `
+    <h3>${catalogName || 'Catalog'}</h3>
+    ${catalogDesc ? `<div class="card-desc">${catalogDesc}</div>` : ''}
+    <div class="card-meta">
+      <i class="fa-solid fa-layer-group"></i> ${fmtNum(r.schema_count)} schema${r.schema_count !== 1 ? 's' : ''}<br>
+      <i class="fa-solid fa-table"></i> ${fmtNum(r.table_count)} dataset${r.table_count !== 1 ? 's' : ''}<br>
+      <i class="fa-solid fa-hashtag"></i> ${fmtNum(r.total_records)} records<br>
+      <i class="fa-solid fa-database"></i> ${fmtSize(r.total_size)}<br>
+      <i class="fa-solid fa-clock"></i> ${fmtDate(r.last_modified)}
     </div>
-  `).join('');
+  `;
+  card.addEventListener('click', () => toggleCatalog(card));
+
+  const catalogSection = document.getElementById('catalog-section');
+  catalogSection.innerHTML = '';
+  catalogSection.appendChild(card);
+
+  renderBreadcrumb();
 }
 
 // ── L2: Schema cards ────────────────────────────────────────────────────────
