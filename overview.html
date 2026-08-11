@@ -52,8 +52,9 @@
     #breadcrumb .crumb i { font-size: 0.75rem; margin-right: 0.3rem; }
     #status-msg { padding: 0.4rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem; display: none; }
     #status-msg.error { background: var(--destructive-foreground); color: var(--destructive); display: block; }
-    #query-row { display: flex; gap: 0.5rem; margin: 0.5rem 0; align-items: center; }
-    #query { flex: 1; font-family: var(--font-mono); font-size: 0.9rem; }
+    #query-row.qb-preview-row { margin: 0.5rem 0; }
+    #query-row .qb-preview-actions { padding-top: 0; align-items: center; }
+    textarea#query.qb-query-preview { display: block; width: 100%; box-sizing: border-box; resize: vertical; min-height: 2.8rem; }
     #run-timer { font-size: 0.8rem; color: var(--muted-foreground); }
 
     /* Shared data table (L4 columns + query results) — matches SURF Curve's data-table component */
@@ -76,10 +77,15 @@
     .explorer-list { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
     .explorer-node { border-bottom: 1px solid var(--border); }
     .explorer-node:last-child { border-bottom: none; }
-    .explorer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.55rem 0.75rem; font-size: 0.85rem; }
+    .explorer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.55rem 0.75rem; font-size: 0.85rem; cursor: pointer; }
     .explorer-row:hover { background: var(--muted); }
+    .explorer-row.selected-for-query { background: var(--secondary); }
+    .explorer-row.search-target { box-shadow: inset 3px 0 0 var(--primary); }
+    .explorer-row.nav-flash { box-shadow: 0 0 0 2px var(--primary); }
+    .explorer-row.nav-flash.nav-flash-fade { transition: box-shadow 2s ease-out; box-shadow: 0 0 0 2px transparent; }
     .explorer-col-name { display: flex; align-items: center; gap: 0.5rem; width: 220px; flex-shrink: 0; font-weight: 500; }
     .explorer-col-name .col-type { color: var(--muted-foreground); font-family: var(--font-mono); font-size: 0.72rem; font-weight: 400; }
+    .explorer-desc { width: 240px; flex-shrink: 0; color: var(--muted-foreground); font-size: 0.78rem; font-style: italic; }
     .explorer-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; color: var(--muted-foreground); flex: 1; min-width: 0; }
     .explorer-stats b { color: var(--foreground); font-weight: 600; }
     .explorer-loading { color: var(--muted-foreground); font-style: italic; }
@@ -89,6 +95,25 @@
     .explorer-children { margin: 0 0 0.5rem 1.9rem; padding-left: 0.75rem; border-left: 1px solid var(--border); }
     .explorer-children .explorer-list { border: none; border-radius: 0; }
     .explorer-children .explorer-node { border-bottom: none; }
+
+    /* Query Builder */
+    #query-builder-heading { display: flex; align-items: center; gap: 0.5rem; }
+    #query-builder-heading i { color: var(--muted-foreground); font-size: 0.85em; }
+    .qb-controls { display: flex; flex-direction: column; gap: 0.6rem; margin: 0.75rem 0 1rem; padding: 0.85rem 1rem; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); }
+    .qb-control-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .qb-control-row > label { flex: 0 0 auto; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+    .qb-control-row .qb-checkbox-label { display: flex; align-items: center; gap: 0.4rem; font-weight: 500; white-space: nowrap; }
+    .qb-control-row input[type="number"] { width: 4.5rem; }
+    .qb-control-row input[type="text"] { flex: 1 1 260px; min-width: 200px; }
+    .qb-control-row input:disabled { opacity: .6; }
+    .qb-control-hint { flex-basis: 100%; font-size: 0.78rem; color: var(--muted-foreground); }
+    .qb-preview-row { display: flex; gap: 0.75rem; align-items: flex-start; flex-wrap: wrap; }
+    .qb-preview-block { flex: 1; min-width: 240px; }
+    .qb-preview-label { font-size: 0.78rem; font-weight: 600; color: var(--muted-foreground); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: .03em; }
+    .qb-query-preview { font-family: var(--font-mono); font-size: 0.82rem; background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem; margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow-y: auto; }
+    .qb-preview-actions { display: flex; gap: 0.5rem; flex-shrink: 0; align-items: flex-start; padding-top: 1.4rem; }
+    #qb-copy-btn { font-size: 0.85rem; padding: 0.4rem 0.6rem; }
+    #qb-run-btn { font-size: 0.85rem; }
 
     /* Sidebar — matches SURF Curve's sidebar component structure/classes */
     #app-shell { display: flex; min-height: 100vh; }
@@ -126,8 +151,11 @@
         <ul id="sidebar-schema-list" class="sidebar-menu"></ul>
       </div>
       <div id="sidebar-footer">
+        <button id="sidebar-querybuilder-btn" class="sidebar-menu-button" type="button">
+          <i class="fa-solid fa-sliders"></i><span>Query Builder</span>
+        </button>
         <button id="sidebar-query-btn" class="sidebar-menu-button" type="button">
-          <i class="fa-solid fa-terminal"></i><span>Query</span>
+          <i class="fa-solid fa-terminal"></i><span>Query Runner</span>
         </button>
       </div>
     </aside>
@@ -200,23 +228,58 @@
       </section>
       <section id="columns-section" style="display:none;margin-top:1.5rem">
         <h2>Columns</h2>
+        <p class="section-hint" id="columns-hint">Approximate profile from a 10,000-row sample. Click a struct/list column to expand it — click any row to construct your custom query in the <a href="#query-builder-heading">Query Builder</a> section below.</p>
         <div id="columns-content"></div>
-      </section>
-      <section id="explorer-section" style="display:none;margin-top:1.5rem">
-        <h2>Table Explorer</h2>
-        <p class="section-hint">Approximate profile from a 10,000-row sample. Click a struct/list column to expand it.</p>
-        <div id="explorer-content"></div>
       </section>
     </div>
 
-    <!-- Query panel (always visible) -->
-    <h2 id="query-heading" style="margin-top:2rem">Query</h2>
+    <!-- Query Builder panel (always visible; collapsed until a dataset is selected) -->
+    <h2 id="query-builder-heading" style="margin-top:1.5rem"><i class="fa-solid fa-sliders"></i> Query Builder</h2>
+    <details id="query-builder-section">
+      <summary id="query-builder-summary">Select a dataset first to build a query</summary>
+      <p class="section-hint">
+        Click column rows in the Columns section above to add them to your query — nested fields work too, and
+        multiple selections are allowed. Selecting nothing means every column (<code>SELECT *</code>). Use the
+        controls below to shape the result, then press "Apply this Query" to copy it into the Query Runner section
+        below, where you can adjust and run it.
+      </p>
+      <div class="qb-controls">
+        <div class="qb-control-row">
+          <label for="qb-limit-input">Limit</label>
+          <input id="qb-limit-input" type="number" min="1" value="10" />
+          <label class="qb-checkbox-label"><input id="qb-distinct-checkbox" type="checkbox" /> Distinct values</label>
+          <span class="qb-control-hint">Maximum rows returned, and/or return only unique rows of the selected columns (the actual values, not a count).</span>
+        </div>
+        <div class="qb-control-row">
+          <label for="qb-search-input" id="qb-search-label">Search inside a column</label>
+          <input id="qb-search-input" type="text" placeholder="Click a column row above to search inside it…" disabled />
+          <span class="qb-control-hint" id="qb-search-hint">Case-insensitive substring match against the last column you clicked — including values nested inside lists.</span>
+        </div>
+      </div>
+      <div class="qb-preview-row">
+        <div class="qb-preview-block">
+          <div class="qb-preview-label">Generated Query</div>
+          <pre id="qb-query-preview" class="qb-query-preview"></pre>
+        </div>
+        <div class="qb-preview-actions">
+          <button id="qb-copy-btn" type="button" title="Copy query to clipboard"><i class="fa-solid fa-copy"></i></button>
+          <button id="qb-run-btn" type="button">Apply this Query</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- Query Runner panel (always visible) -->
+    <h2 id="query-heading" style="margin-top:2rem">Query Runner</h2>
     <details id="query-section">
       <summary>Query the data right here</summary>
-      <div id="query-row">
-        <input id="query" type="text" value="SELECT * FROM openapc.apc LIMIT 10" />
-        <button id="btn-run" disabled>Run</button>
-        <span id="run-timer"></span>
+      <div id="query-row" class="qb-preview-row">
+        <div class="qb-preview-block">
+          <textarea id="query" class="qb-query-preview" rows="3">SELECT * FROM openapc.apc LIMIT 10</textarea>
+        </div>
+        <div class="qb-preview-actions">
+          <button id="btn-run" disabled>Run Query</button>
+          <span id="run-timer"></span>
+        </div>
       </div>
       <div id="results"></div>
     </details>
@@ -321,6 +384,7 @@ const state = {
   schema: null,      // selected schema name (L3+)
   tableId: null,     // selected table id (L4)
   tableName: null,   // selected table name (L4)
+  queryText: null,   // last-run SQL, for the shareable ?query= URL param
 };
 
 // ── Breadcrumb / sidebar / accordion collapse ───────────────────────────────
@@ -364,7 +428,7 @@ function clearSidebarDatasets() {
 }
 
 function clearSidebarColumns() {
-  document.querySelectorAll('#sidebar-schema-list .sidebar-menu-subsub, #sidebar-schema-list .sidebar-explorer-link').forEach(el => el.remove());
+  document.querySelectorAll('#sidebar-schema-list .sidebar-menu-subsub').forEach(el => el.remove());
 }
 
 // Icon per DuckDB column type, matching the DuckDB UI Catalog Explorer's type-icon convention.
@@ -416,6 +480,7 @@ function syncUrl() {
   const parts = [`catalog=${encodeParam(state.catalogUrl)}`];
   if (state.schema) parts.push(`schema=${encodeParam(state.schema)}`);
   if (state.tableName) parts.push(`table=${encodeParam(state.tableName)}`);
+  if (state.queryText) parts.push(`query=${encodeParam(state.queryText)}`);
   history.replaceState(null, '', `${window.location.pathname}?${parts.join('&')}`);
 }
 
@@ -455,18 +520,36 @@ function toggleCatalog() {
   }
 }
 
+// Collapses the Query Builder details back to its placeholder state — used whenever the
+// drill-down leaves the selected table, since the builder's controls only make sense in the
+// context of one table's columns.
+function resetQueryBuilder() {
+  qbSchemaName = null;
+  qbTableName = null;
+  qbSelected.clear();
+  qbSearchTarget = null;
+  qbSearchTerm = '';
+  document.getElementById('qb-query-preview').textContent = '';
+  document.getElementById('qb-search-input').value = '';
+  document.getElementById('qb-search-input').disabled = true;
+  document.getElementById('qb-search-input').placeholder = 'Click a column row above to search inside it…';
+  document.getElementById('qb-search-label').textContent = 'Search inside a column';
+  document.getElementById('query-builder-section').open = false;
+  document.getElementById('query-builder-summary').textContent = 'Select a dataset first to build a query';
+}
+
 function collapseDatasets() {
   document.getElementById('datasets-section').style.display = 'none';
   document.getElementById('datasets-grid').innerHTML = '';
   document.getElementById('columns-section').style.display = 'none';
   document.getElementById('columns-content').innerHTML = '';
-  document.getElementById('explorer-section').style.display = 'none';
-  document.getElementById('explorer-content').innerHTML = '';
+  resetQueryBuilder();
   explorerToken += 1;
   clearSidebarDatasets();
   state.schema = null;
   state.tableId = null;
   state.tableName = null;
+  state.queryText = null;
   syncSchemaActive(null);
   renderBreadcrumb();
   syncUrl();
@@ -475,12 +558,12 @@ function collapseDatasets() {
 function collapseColumns() {
   document.getElementById('columns-section').style.display = 'none';
   document.getElementById('columns-content').innerHTML = '';
-  document.getElementById('explorer-section').style.display = 'none';
-  document.getElementById('explorer-content').innerHTML = '';
+  resetQueryBuilder();
   explorerToken += 1;
   clearSidebarColumns();
   state.tableId = null;
   state.tableName = null;
+  state.queryText = null;
   syncDatasetActive(null);
   renderBreadcrumb();
   syncUrl();
@@ -521,18 +604,30 @@ async function connect(catalogUrl) {
 }
 
 async function restoreSelectionFromUrl() {
-  // Uses the params captured at boot (initialSchemaParam/initialTableParam) rather than
-  // re-parsing the URL here — by this point syncUrl() calls from the initial connect's own
-  // state resets have already rewritten the address bar, so window.location.search no
-  // longer has them.
-  if (!initialSchemaParam || !findSidebarSchemaItem(initialSchemaParam)) return;
-  await selectSchema(initialSchemaParam);
+  // Uses the params captured at boot (initialSchemaParam/initialTableParam/initialQueryParam)
+  // rather than re-parsing the URL here — by this point syncUrl() calls from the initial
+  // connect's own state resets have already rewritten the address bar, so
+  // window.location.search no longer has them.
+  if (initialSchemaParam && findSidebarSchemaItem(initialSchemaParam)) {
+    await selectSchema(initialSchemaParam);
 
-  if (!initialTableParam) return;
-  const tableBtn = Array.from(document.querySelectorAll('#datasets-grid [data-table-name]'))
-    .find(el => el.dataset.tableName === initialTableParam);
-  if (!tableBtn) return;
-  await selectDataset(initialSchemaParam, tableBtn.dataset.tableId, initialTableParam);
+    if (initialTableParam) {
+      const tableBtn = Array.from(document.querySelectorAll('#datasets-grid [data-table-name]'))
+        .find(el => el.dataset.tableName === initialTableParam);
+      if (tableBtn) {
+        await selectDataset(initialSchemaParam, tableBtn.dataset.tableId, initialTableParam);
+      }
+    }
+  }
+
+  // A shared/bookmarked query is restored into the input and the URL, but — same rule as the
+  // Query Builder's own "Run this Query" button — never auto-run without an explicit click.
+  if (initialQueryParam) {
+    document.getElementById('query').value = initialQueryParam;
+    document.getElementById('query-section').open = true;
+    state.queryText = initialQueryParam;
+    syncUrl();
+  }
 }
 
 // ── Data table (shared by L4 columns + query results) ───────────────────────
@@ -665,6 +760,18 @@ function renderDataTable(container, rows, columnDefs, opts = {}) {
   exportBtn.addEventListener('click', () => exportCsv(opts.exportFilename || 'export.csv', columnDefs, currentRows()));
   toolbar.appendChild(exportBtn);
 
+  if (opts.shareUrl) {
+    const shareBtn = document.createElement('button');
+    const shareLabel = '🔗 Share Query';
+    shareBtn.textContent = shareLabel;
+    shareBtn.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(`Check out this data query:\n${window.location.href}`);
+      shareBtn.textContent = '✓ Copied!';
+      setTimeout(() => { shareBtn.textContent = shareLabel; }, 1500);
+    });
+    toolbar.appendChild(shareBtn);
+  }
+
   container.appendChild(toolbar);
 
   const tableWrap = document.createElement('div');
@@ -683,6 +790,7 @@ function renderResultTable(rows, container) {
   renderDataTable(container, rows, columnDefs, {
     filterPlaceholder: 'Filter results…',
     exportFilename: 'query-results.csv',
+    shareUrl: true,
   });
 }
 
@@ -690,6 +798,10 @@ async function runUserQuery() {
   if (!state.conn) return;
   const sql = document.getElementById('query').value.trim();
   if (!sql) return;
+  // "Run Query" is the one action that commits the current text to the shareable URL — so a
+  // query can be adjusted freely without touching the address bar until you actually run it.
+  state.queryText = sql;
+  syncUrl();
   const resultsEl = document.getElementById('results');
   const timerEl = document.getElementById('run-timer');
   timerEl.textContent = '';
@@ -918,15 +1030,6 @@ function renderSidebarColumns(tableId, rows) {
   const li = findSidebarDatasetItem(String(tableId));
   if (!li) return;
 
-  const explorerBtn = document.createElement('button');
-  explorerBtn.type = 'button';
-  explorerBtn.className = 'sidebar-menu-subsub-button sidebar-explorer-link';
-  explorerBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i><span>Table Explorer</span>';
-  explorerBtn.addEventListener('click', () => {
-    document.getElementById('explorer-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-  li.appendChild(explorerBtn);
-
   const sub = document.createElement('ul');
   sub.className = 'sidebar-menu-subsub';
   rows.forEach(r => {
@@ -937,7 +1040,15 @@ function renderSidebarColumns(tableId, rows) {
     btn.title = r.column_type;
     btn.innerHTML = `<i class="${columnTypeIcon(r.column_type)}"></i><span>${r.column_name}</span>`;
     btn.addEventListener('click', () => {
-      document.getElementById('columns-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const targetRow = Array.from(document.querySelectorAll('#columns-content .explorer-row'))
+        .find(el => el.dataset.colId === r.column_id);
+      if (!targetRow) return;
+      targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetRow.classList.add('nav-flash');
+      setTimeout(() => {
+        targetRow.classList.add('nav-flash-fade');
+        setTimeout(() => targetRow.classList.remove('nav-flash', 'nav-flash-fade'), 2000);
+      }, 5000);
     });
     subLi.appendChild(btn);
     sub.appendChild(subLi);
@@ -971,16 +1082,21 @@ async function selectSchema(schemaName) {
   }
 }
 
-// ── Table Explorer ───────────────────────────────────────────────────────────
-// Per-column profile (null %, cardinality, min/max, histogram) computed from a
-// USING SAMPLE 10000 ROWS query per column, run sequentially — never combined,
-// never a full scan. Benchmarked against the live catalog: combining columns in
-// one query let a single high-cardinality VARCHAR column balloon a 20k-row
-// sampled query to 659s; one query per column keeps each one's cost isolated
-// and lets the panel render progressively instead of blocking on the slowest
-// column. Struct/list columns show an expand toggle instead (built from
-// ducklake_column's parent_column tree — schema metadata, not data, so it's
-// cheap regardless of table size) rather than a stats query.
+// ── Columns / Table Explorer / query builder ─────────────────────────────────
+// One merged view: per-column profile (null %, cardinality, min/max, histogram)
+// computed from a USING SAMPLE 10000 ROWS query per column, run sequentially —
+// never combined, never a full scan. Benchmarked against the live catalog:
+// combining columns in one query let a single high-cardinality VARCHAR column
+// balloon a 20k-row sampled query to 659s; one query per column keeps each
+// one's cost isolated and lets the panel render progressively instead of
+// blocking on the slowest column. Struct/list columns show an expand toggle
+// instead (built from ducklake_column's parent_column tree — schema metadata,
+// not data, so it's cheap regardless of table size) rather than a stats query.
+//
+// Clicking a row also builds a SELECT query interactively (query builder
+// state below) — this only ever runs on an explicit "Run this Query" click,
+// so unlike the profiling stats it needs no sampling: a SELECT ... WHERE ...
+// LIMIT n query can stop as soon as it finds n matches.
 
 function toEpochSeconds(v) {
   if (v instanceof Date) return v.getTime() / 1000;
@@ -988,18 +1104,161 @@ function toEpochSeconds(v) {
   return v;
 }
 
+// Query-builder state, reset each time a dataset is (re)selected.
+let qbSelected = new Map();   // column_id -> { sqlPath, label }
+let qbSearchTarget = null;    // { segments, label } | null -- the most recently clicked row
+let qbDistinct = false;
+let qbSearchTerm = '';
+let qbLimit = 10;
+let qbSchemaName = null;
+let qbTableName = null;
+let qbCurrentSql = '';
+
 async function fetchColumnTree(conn, tableId) {
   const rows = await runQuery(conn, `
-    SELECT column_id, column_name, column_type, parent_column
-    FROM __ducklake_metadata_db.ducklake_column
-    WHERE table_id = ${tableId} AND end_snapshot IS NULL
-    ORDER BY column_order
+    SELECT c.column_id, c.column_name, c.column_type, c.parent_column, ct.value AS description
+    FROM __ducklake_metadata_db.ducklake_column c
+    LEFT JOIN __ducklake_metadata_db.ducklake_column_tag ct
+      ON c.column_id = ct.column_id AND ct.table_id = c.table_id
+      AND ct.key = 'comment' AND ct.end_snapshot IS NULL
+    WHERE c.table_id = ${tableId} AND c.end_snapshot IS NULL
+    ORDER BY c.column_order
   `);
   rows.forEach(r => {
     r.column_id = String(r.column_id);
     r.parent_column = r.parent_column == null ? null : String(r.parent_column);
   });
   return rows;
+}
+
+// A LIST(STRUCT) column's child is a single synthetic node named "element" representing the
+// item type — it's not a real named path segment (you write list_filter(col, x -> x.field...),
+// never col.element.field), so it's transparently skipped everywhere a path/child is built.
+function realChildren(tree, col) {
+  const direct = tree.filter(c => c.parent_column === col.column_id);
+  if (direct.length === 1 && direct[0].column_name === 'element') return realChildren(tree, direct[0]);
+  return direct;
+}
+
+// Root-to-node chain of {name, type, isList}, skipping synthetic "element" wrapper nodes.
+function nodeSegments(tree, node) {
+  const byId = new Map(tree.map(n => [n.column_id, n]));
+  const segs = [];
+  let cur = node;
+  while (cur) {
+    if (cur.column_name !== 'element') {
+      segs.push({ name: cur.column_name, type: cur.column_type, isList: isListType(cur.column_type) });
+    }
+    cur = cur.parent_column ? byId.get(cur.parent_column) : null;
+  }
+  return segs.reverse();
+}
+
+// DuckDB dot-notation only works through STRUCT, not LIST — a value nested inside a list can't
+// be projected directly, so SELECT-ing it really means SELECT-ing the whole list column,
+// truncated at the point the list starts.
+function selectPathFor(segments) {
+  const listIdx = segments.findIndex(s => s.isList);
+  const upTo = listIdx === -1 ? segments : segments.slice(0, listIdx + 1);
+  return upTo.map(s => quoteIdent(s.name)).join('.');
+}
+
+// Recursively builds a WHERE predicate for "does <segments> contain a value matching term",
+// wrapping each LIST hop in len(list_filter(..., x -> ...)) > 0. baseVar is null for the first
+// (real column reference) segment chain, or a lambda variable name once inside a list.
+function buildSearchPredicate(segments, term, baseVar, depth) {
+  const esc = String(term).replace(/'/g, "''");
+  const pathTo = segs => {
+    const names = segs.map(s => quoteIdent(s.name));
+    return baseVar ? [baseVar, ...names].join('.') : names.join('.');
+  };
+  const listIdx = segments.findIndex(s => s.isList);
+  if (listIdx === -1) {
+    return `${pathTo(segments)} ILIKE '%${esc}%'`;
+  }
+  const prefixPath = pathTo(segments.slice(0, listIdx + 1));
+  const lambdaVar = `x${depth || 0}`;
+  const remaining = segments.slice(listIdx + 1);
+  const innerPred = remaining.length
+    ? buildSearchPredicate(remaining, term, lambdaVar, (depth || 0) + 1)
+    : `${lambdaVar} ILIKE '%${esc}%'`;
+  return `len(list_filter(${prefixPath}, ${lambdaVar} -> ${innerPred})) > 0`;
+}
+
+// Line-break before the major clauses of a generated (never user-typed) query — the keywords
+// are always single-occurrence and unambiguous here, so a plain string replace is enough; a
+// real SQL formatter would be solving a problem this input doesn't have.
+function formatSqlForPreview(sql) {
+  return sql.replace(/ FROM /, '\nFROM ').replace(/ WHERE /, '\nWHERE ').replace(/ LIMIT /, '\nLIMIT ');
+}
+
+function refreshQueryPreview() {
+  const previewEl = document.getElementById('qb-query-preview');
+  if (!previewEl || !qbSchemaName) return;
+  const selectPaths = [...new Set([...qbSelected.values()].map(v => v.sqlPath))];
+  const selectClause = selectPaths.length ? selectPaths.join(', ') : '*';
+  const distinctKw = qbDistinct ? 'DISTINCT ' : '';
+  let whereClause = '';
+  if (qbSearchTerm.trim() && qbSearchTarget) {
+    whereClause = ` WHERE ${buildSearchPredicate(qbSearchTarget.segments, qbSearchTerm.trim())}`;
+  }
+  qbCurrentSql = `SELECT ${distinctKw}${selectClause} FROM ${quoteIdent(qbSchemaName)}.${quoteIdent(qbTableName)}${whereClause} LIMIT ${qbLimit}`;
+  previewEl.textContent = formatSqlForPreview(qbCurrentSql);
+
+  const searchInput = document.getElementById('qb-search-input');
+  const searchLabel = document.getElementById('qb-search-label');
+  if (searchInput) {
+    searchInput.disabled = !qbSearchTarget;
+    searchInput.placeholder = qbSearchTarget
+      ? `Type a substring to find in "${qbSearchTarget.label}"…`
+      : 'Click a column row above to search inside it…';
+  }
+  if (searchLabel) {
+    searchLabel.textContent = qbSearchTarget ? `Search inside "${qbSearchTarget.label}"` : 'Search inside a column';
+  }
+}
+
+function toggleQuerySelection(row, col, segments) {
+  const key = col.column_id;
+  if (qbSelected.has(key)) {
+    qbSelected.delete(key);
+    row.classList.remove('selected-for-query');
+  } else {
+    qbSelected.set(key, { sqlPath: selectPathFor(segments), label: segments.map(s => s.name).join(' › ') });
+    row.classList.add('selected-for-query');
+  }
+  document.querySelectorAll('#columns-content .explorer-row.search-target').forEach(r => r.classList.remove('search-target'));
+  qbSearchTarget = { segments, label: segments.map(s => s.name).join(' › ') };
+  row.classList.add('search-target');
+  refreshQueryPreview();
+}
+
+function wireRowClick(row, col, segments) {
+  row.addEventListener('click', e => {
+    if (e.target.closest('.explorer-expand-btn')) return;
+    toggleQuerySelection(row, col, segments);
+  });
+}
+
+// Query construction controls live in the static #query-builder-section markup (wired once,
+// below); this toolbar is just the per-dataset Download action for the Columns section itself.
+function buildColumnsToolbar(schemaName, tableName) {
+  const toolbar = document.createElement('div');
+  toolbar.className = 'data-table-toolbar';
+
+  const spacer = document.createElement('div');
+  spacer.className = 'spacer';
+
+  const exportBtn = document.createElement('button');
+  exportBtn.textContent = '⬇ Download this table with column descriptions';
+  exportBtn.addEventListener('click', () => exportBtn._exportRows && exportCsv(
+    `${schemaName}.${tableName}.columns.csv`,
+    [{ key: 'path', label: 'Path' }, { key: 'column_name', label: 'Column' }, { key: 'column_type', label: 'Type' }, { key: 'description', label: 'Description' }, { key: 'stats', label: 'Statistics' }],
+    exportBtn._exportRows
+  ));
+
+  toolbar.append(spacer, exportBtn);
+  return { el: toolbar, exportBtn };
 }
 
 async function fetchHistogram(conn, sampleFrom, mn, mx, temporal) {
@@ -1045,6 +1304,16 @@ async function fetchListLengthStats(conn, schemaName, tableName, pathExpr) {
   return { n: Number(r.n), mn: Number(r.mn), avgLen: Number(r.avgLen), mx: Number(r.mx), empties: Number(r.empties) };
 }
 
+// Plain-text mirror of renderStatsHtml's numbers, for the CSV export (no histogram — that's
+// visual-only, nothing sensible to write as text).
+function formatStatsText(stats) {
+  const nullPct = stats.n ? (100 * (stats.n - stats.nonnull) / stats.n) : 0;
+  if (stats.kind === 'bool') {
+    return `true: ${fmtNum(stats.t)}, false: ${fmtNum(stats.f)}, ${nullPct.toFixed(0)}% null`;
+  }
+  return `~${fmtNum(stats.distinctCount)} distinct, ${nullPct.toFixed(0)}% null, min ${formatCellValue(stats.mn)} – max ${formatCellValue(stats.mx)}`;
+}
+
 function renderStatsHtml(stats) {
   const nullPct = stats.n ? (100 * (stats.n - stats.nonnull) / stats.n) : 0;
   if (stats.kind === 'bool') {
@@ -1063,7 +1332,11 @@ function renderStatsHtml(stats) {
 function explorerRowSkeleton(col) {
   const row = document.createElement('div');
   row.className = 'explorer-row';
-  row.innerHTML = `<div class="explorer-col-name"><i class="${columnTypeIcon(col.column_type)}"></i><span>${col.column_name}</span><span class="col-type">${col.column_type}</span></div>`;
+  row.dataset.colId = col.column_id;
+  row.innerHTML = `
+    <div class="explorer-col-name"><i class="${columnTypeIcon(col.column_type)}"></i><span>${col.column_name}</span><span class="col-type">${col.column_type}</span></div>
+    <div class="explorer-desc">${col.description || ''}</div>
+  `;
   const bodyEl = document.createElement('div');
   bodyEl.className = 'explorer-stats';
   bodyEl.innerHTML = '<span class="explorer-loading">Loading…</span>';
@@ -1071,15 +1344,19 @@ function explorerRowSkeleton(col) {
   return { row, bodyEl };
 }
 
-function buildLeafNode(conn, schemaName, tableName, col, pathExpr) {
+function buildLeafNode(conn, schemaName, tableName, tree, col, exportStatsMap) {
+  const segments = nodeSegments(tree, col);
   const { row, bodyEl } = explorerRowSkeleton(col);
+  wireRowClick(row, col, segments);
   const wrapper = document.createElement('div');
   wrapper.className = 'explorer-node';
   wrapper.appendChild(row);
   async function loadStats() {
     try {
-      const stats = await fetchColumnStats(conn, schemaName, tableName, pathExpr, col.column_type);
+      const stats = await fetchColumnStats(conn, schemaName, tableName, selectPathFor(segments), col.column_type);
       bodyEl.innerHTML = renderStatsHtml(stats);
+      const exportRow = exportStatsMap && exportStatsMap.get(col.column_id);
+      if (exportRow) exportRow.stats = formatStatsText(stats);
     } catch (e) {
       bodyEl.innerHTML = '<span class="explorer-loading">unavailable</span>';
     }
@@ -1089,12 +1366,14 @@ function buildLeafNode(conn, schemaName, tableName, col, pathExpr) {
 
 // Schema-only tree (name/type/icon, no stats query) for fields reached through a LIST —
 // getting per-field value stats there needs UNNEST (changes row cardinality, real added
-// cost/complexity) which is out of scope; still lets you see the nested shape.
-function buildSchemaOnlyNode(tree, col) {
+// cost/complexity) which is out of scope; still fully selectable/searchable for the query
+// builder, and lets you see the nested shape.
+function buildSchemaOnlyNode(tree, col, segments) {
   const wrapper = document.createElement('div');
   wrapper.className = 'explorer-node';
   const { row, bodyEl } = explorerRowSkeleton(col);
-  const children = tree.filter(c => c.parent_column === col.column_id);
+  wireRowClick(row, col, segments);
+  const children = realChildren(tree, col);
   if (isCompositeType(col.column_type) && children.length) {
     let expanded = false;
     const toggleBtn = document.createElement('button');
@@ -1107,13 +1386,16 @@ function buildSchemaOnlyNode(tree, col) {
     childrenContainer.className = 'explorer-children';
     childrenContainer.style.display = 'none';
     let built = false;
-    toggleBtn.addEventListener('click', () => {
+    toggleBtn.addEventListener('click', e => {
+      e.stopPropagation();
       expanded = !expanded;
       toggleBtn.textContent = label();
       childrenContainer.style.display = expanded ? 'block' : 'none';
       if (!built) {
         built = true;
-        children.forEach(c => childrenContainer.appendChild(buildSchemaOnlyNode(tree, c)));
+        children.forEach(c => childrenContainer.appendChild(
+          buildSchemaOnlyNode(tree, c, [...segments, { name: c.column_name, type: c.column_type, isList: isListType(c.column_type) }])
+        ));
       }
     });
     wrapper.appendChild(row);
@@ -1125,15 +1407,19 @@ function buildSchemaOnlyNode(tree, col) {
   return wrapper;
 }
 
-function buildCompositeNode(conn, schemaName, tableName, tree, col, pathExpr) {
+function buildCompositeNode(conn, schemaName, tableName, tree, col, segments, exportStatsMap) {
   const { row, bodyEl } = explorerRowSkeleton(col);
+  wireRowClick(row, col, segments);
   const isList = isListType(col.column_type);
-  const children = tree.filter(c => c.parent_column === col.column_id);
+  const children = realChildren(tree, col);
+  const fieldsLabel = `${children.length} field${children.length !== 1 ? 's' : ''}`;
+  const exportRow = exportStatsMap && exportStatsMap.get(col.column_id);
+  if (exportRow) exportRow.stats = fieldsLabel;
 
   let expanded = false, loaded = false;
   const toggleBtn = document.createElement('button');
   toggleBtn.className = 'explorer-expand-btn';
-  const label = () => `${expanded ? '▾' : '▸'} ${children.length} field${children.length !== 1 ? 's' : ''}`;
+  const label = () => `${expanded ? '▾' : '▸'} ${fieldsLabel}`;
   toggleBtn.textContent = label();
   bodyEl.innerHTML = '';
   bodyEl.appendChild(toggleBtn);
@@ -1146,7 +1432,8 @@ function buildCompositeNode(conn, schemaName, tableName, tree, col, pathExpr) {
   childrenContainer.style.display = 'none';
   wrapper.appendChild(childrenContainer);
 
-  toggleBtn.addEventListener('click', async () => {
+  toggleBtn.addEventListener('click', async e => {
+    e.stopPropagation();
     expanded = !expanded;
     toggleBtn.textContent = label();
     childrenContainer.style.display = expanded ? 'block' : 'none';
@@ -1154,24 +1441,31 @@ function buildCompositeNode(conn, schemaName, tableName, tree, col, pathExpr) {
     loaded = true;
 
     if (isList) {
+      // Children (schema structure) render immediately — only the list-length stat itself
+      // waits on a query. Expanding to see the nested shape should never feel gated on a
+      // network round-trip.
+      children.forEach(c => childrenContainer.appendChild(
+        buildSchemaOnlyNode(tree, c, [...segments, { name: c.column_name, type: c.column_type, isList: isListType(c.column_type) }])
+      ));
       const lenEl = document.createElement('span');
       lenEl.className = 'explorer-loading';
       lenEl.textContent = 'Loading list length…';
       bodyEl.appendChild(lenEl);
       try {
-        const s = await fetchListLengthStats(conn, schemaName, tableName, pathExpr);
+        const s = await fetchListLengthStats(conn, schemaName, tableName, selectPathFor(segments));
+        const listStatsText = `avg ${Number(s.avgLen).toFixed(1)} items/row (${fmtNum(s.mn)}–${fmtNum(s.mx)}), ${s.n ? (100 * s.empties / s.n).toFixed(0) : 0}% empty`;
         lenEl.className = '';
-        lenEl.innerHTML = `avg <b>${Number(s.avgLen).toFixed(1)}</b> items/row (${fmtNum(s.mn)}–${fmtNum(s.mx)}), ${s.n ? (100 * s.empties / s.n).toFixed(0) : 0}% empty`;
-      } catch (e) {
+        lenEl.innerHTML = listStatsText.replace(/^avg (\S+)/, 'avg <b>$1</b>');
+        if (exportRow) exportRow.stats = `${fieldsLabel}, ${listStatsText}`;
+      } catch (e2) {
         lenEl.textContent = 'list length unavailable';
       }
-      children.forEach(c => childrenContainer.appendChild(buildSchemaOnlyNode(tree, c)));
     } else {
       children.forEach(child => {
-        const childPath = `${pathExpr}.${quoteIdent(child.column_name)}`;
+        const childSegments = [...segments, { name: child.column_name, type: child.column_type, isList: isListType(child.column_type) }];
         const node = isCompositeType(child.column_type)
-          ? buildCompositeNode(conn, schemaName, tableName, tree, child, childPath)
-          : buildLeafNode(conn, schemaName, tableName, child, childPath);
+          ? buildCompositeNode(conn, schemaName, tableName, tree, child, childSegments, exportStatsMap)
+          : buildLeafNode(conn, schemaName, tableName, tree, child, exportStatsMap);
         childrenContainer.appendChild(node.el);
         if (node.loadStats) node.loadStats();
       });
@@ -1186,75 +1480,74 @@ function buildCompositeNode(conn, schemaName, tableName, tree, col, pathExpr) {
 // further queries) once a newer selection has superseded it.
 let explorerToken = 0;
 
-async function renderTableExplorer(conn, schemaName, tableName, tableId, container, token) {
-  container.innerHTML = '<p class="explorer-loading" style="padding:0.75rem">Loading column tree…</p>';
-  const tree = await fetchColumnTree(conn, tableId);
+// exportStatsMap: column_id -> the same row object pushed into `out`, so a later-resolving
+// stats fetch (buildLeafNode/buildCompositeNode) can fill in exportRow.stats in place.
+function flattenTreeForExport(tree, node, breadcrumb, out, statsMap) {
+  const path = [...breadcrumb, node.column_name].join(' › ');
+  const row = { path, column_name: node.column_name, column_type: node.column_type, description: node.description || '', stats: '' };
+  out.push(row);
+  statsMap.set(node.column_id, row);
+  realChildren(tree, node).forEach(c => flattenTreeForExport(tree, c, [...breadcrumb, node.column_name], out, statsMap));
+}
+
+async function renderColumnsExplorer(conn, schemaName, tableName, tableId, container, token) {
+  qbSelected.clear();
+  qbSearchTarget = null;
+  qbDistinct = false;
+  qbSearchTerm = '';
+  qbLimit = 10;
+  qbSchemaName = schemaName;
+  qbTableName = tableName;
+  document.getElementById('qb-limit-input').value = '10';
+  document.getElementById('qb-distinct-checkbox').checked = false;
+  document.getElementById('qb-search-input').value = '';
+
+  const [tree, recordCountRows] = await Promise.all([
+    fetchColumnTree(conn, tableId),
+    runQuery(conn, `
+      SELECT COALESCE(ts.record_count, 0) AS rc
+      FROM __ducklake_metadata_db.ducklake_table t
+      JOIN __ducklake_metadata_db.ducklake_table_stats ts ON t.table_id = ts.table_id
+      WHERE t.table_id = ${tableId}
+    `),
+  ]);
   if (token !== explorerToken) return;
   const topLevel = tree.filter(r => r.parent_column === null);
 
+  document.getElementById('columns-hint').innerHTML =
+    `Approximate profile of this dataset (${fmtNum(recordCountRows[0]?.rc)} records), based on a 10,000-row sample. ` +
+    `Click a struct/list column to expand it — click any row to construct your custom query in the ` +
+    `<a href="#query-builder-heading">Query Builder</a> section below.`;
+
+  const toolbar = buildColumnsToolbar(schemaName, tableName);
+  const exportRows = [];
+  const exportStatsMap = new Map();
+  topLevel.forEach(col => flattenTreeForExport(tree, col, [], exportRows, exportStatsMap));
+  toolbar.exportBtn._exportRows = exportRows;
+
+  container.innerHTML = '';
   const list = document.createElement('div');
   list.className = 'explorer-list';
-  container.innerHTML = '';
   container.appendChild(list);
+  container.appendChild(toolbar.el);
 
   const leafNodes = [];
   topLevel.forEach(col => {
-    const pathExpr = quoteIdent(col.column_name);
+    const segments = nodeSegments(tree, col);
     const node = isCompositeType(col.column_type)
-      ? buildCompositeNode(conn, schemaName, tableName, tree, col, pathExpr)
-      : buildLeafNode(conn, schemaName, tableName, col, pathExpr);
+      ? buildCompositeNode(conn, schemaName, tableName, tree, col, segments, exportStatsMap)
+      : buildLeafNode(conn, schemaName, tableName, tree, col, exportStatsMap);
     list.appendChild(node.el);
     if (node.loadStats) leafNodes.push(node);
   });
+
+  refreshQueryPreview();
+  renderSidebarColumns(tableId, topLevel);
 
   for (const node of leafNodes) {
     if (token !== explorerToken) return;
     await node.loadStats();
   }
-}
-
-async function renderL4(conn, schemaName, tableId, tableName, container) {
-  const rows = await runQuery(conn, `
-    SELECT
-      c.column_order,
-      c.column_name,
-      c.column_type,
-      ct.value AS description
-    FROM __ducklake_metadata_db.ducklake_column c
-    LEFT JOIN __ducklake_metadata_db.ducklake_column_tag ct
-      ON c.column_id = ct.column_id AND ct.table_id = c.table_id
-      AND ct.key = 'comment' AND ct.end_snapshot IS NULL
-    WHERE c.table_id = ${tableId} AND c.end_snapshot IS NULL AND c.parent_column IS NULL
-    ORDER BY c.column_order
-  `);
-
-  // Copy & run button
-  const previewSql = `SELECT * FROM ${quoteIdent(schemaName)}.${quoteIdent(tableName)} LIMIT 10`;
-  const btnCopyRun = document.createElement('button');
-  btnCopyRun.textContent = '▶ Copy & run: ' + previewSql;
-  btnCopyRun.style.cssText = 'margin-bottom:1rem;font-size:0.85rem;font-family:var(--font-mono)';
-  btnCopyRun.addEventListener('click', () => {
-    document.getElementById('query').value = previewSql;
-    document.getElementById('query-section').open = true;
-    runUserQuery();
-    document.getElementById('query-section').scrollIntoView({ behavior: 'smooth' });
-  });
-
-  // Column table
-  container.innerHTML = '';
-  container.appendChild(btnCopyRun);
-  const tableContainer = document.createElement('div');
-  container.appendChild(tableContainer);
-  renderDataTable(tableContainer, rows, [
-    { key: 'column_name', label: 'Column' },
-    { key: 'column_type', label: 'Type', mono: true },
-    { key: 'description', label: 'Description', wrap: true },
-  ], {
-    filterPlaceholder: 'Filter columns…',
-    exportFilename: `${schemaName}.${tableName}.columns.csv`,
-  });
-
-  renderSidebarColumns(tableId, rows);
 }
 
 async function selectDataset(schemaName, tableId, tableName) {
@@ -1270,27 +1563,21 @@ async function selectDataset(schemaName, tableId, tableName) {
   syncUrl();
 
   document.getElementById('columns-section').style.display = 'block';
-  document.getElementById('explorer-section').style.display = 'block';
+  document.getElementById('query-builder-section').open = true;
+  document.getElementById('query-builder-summary').textContent = `Build a query for "${tableName}"`;
   const columnsContent = document.getElementById('columns-content');
-  const explorerContent = document.getElementById('explorer-content');
-  setLoading(columnsContent);
-  explorerContent.innerHTML = '<p class="explorer-loading" style="padding:0.75rem">Loading column tree…</p>';
+  columnsContent.innerHTML = '<p class="explorer-loading" style="padding:0.75rem">Loading column tree…</p>';
   clearSidebarColumns();
   clearError();
-  try {
-    await renderL4(state.conn, schemaName, tableId, tableName, columnsContent);
-  } catch (e) {
-    showError('Failed to load table: ' + e.message);
-  }
 
-  // Not awaited: profiling runs progressively in the background so it never blocks the
-  // (fast) Columns table above it. Guarded by explorerToken against a rapid re-selection race.
+  // Not awaited: the fast schema/toolbar render happens immediately, stats fill in
+  // progressively after. Guarded by explorerToken against a rapid re-selection race.
   explorerToken += 1;
   const myExplorerToken = explorerToken;
-  renderTableExplorer(state.conn, schemaName, tableName, tableId, explorerContent, myExplorerToken)
+  renderColumnsExplorer(state.conn, schemaName, tableName, tableId, columnsContent, myExplorerToken)
     .catch(e => {
       if (myExplorerToken === explorerToken) {
-        explorerContent.innerHTML = `<p style="color:var(--destructive)">Failed to load table explorer: ${e.message}</p>`;
+        columnsContent.innerHTML = `<p style="color:var(--destructive)">Failed to load columns: ${e.message}</p>`;
       }
     });
 }
@@ -1317,6 +1604,7 @@ document.getElementById('catalog-url').value = catalogUrl;
 const initialUrlParams = new URLSearchParams(window.location.search);
 const initialSchemaParam = initialUrlParams.get('schema');
 const initialTableParam = initialUrlParams.get('table');
+const initialQueryParam = initialUrlParams.get('query');
 
 document.getElementById('btn-connect').addEventListener('click', () => {
   const url = document.getElementById('catalog-url').value.trim();
@@ -1334,6 +1622,41 @@ document.getElementById('sidebar-catalog-btn').addEventListener('click', () => {
 });
 
 document.getElementById('sidebar-query-btn').addEventListener('click', () => {
+  document.getElementById('query-section').open = true;
+  document.getElementById('query-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+document.getElementById('sidebar-querybuilder-btn').addEventListener('click', () => {
+  if (qbSchemaName) document.getElementById('query-builder-section').open = true;
+  document.getElementById('query-builder-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+document.getElementById('qb-limit-input').addEventListener('input', e => {
+  qbLimit = Math.max(1, parseInt(e.target.value, 10) || 10);
+  refreshQueryPreview();
+});
+
+document.getElementById('qb-distinct-checkbox').addEventListener('change', e => {
+  qbDistinct = e.target.checked;
+  refreshQueryPreview();
+});
+
+document.getElementById('qb-search-input').addEventListener('input', e => {
+  qbSearchTerm = e.target.value;
+  refreshQueryPreview();
+});
+
+document.getElementById('qb-copy-btn').addEventListener('click', async () => {
+  await navigator.clipboard.writeText(qbCurrentSql);
+  const icon = document.querySelector('#qb-copy-btn i');
+  icon.className = 'fa-solid fa-check';
+  setTimeout(() => { icon.className = 'fa-solid fa-copy'; }, 1200);
+});
+
+// "Apply this Query" only hands the generated SQL off to the Query Runner — it deliberately
+// doesn't run it, so the two actions (build vs. run/adjust/save) stay separate.
+document.getElementById('qb-run-btn').addEventListener('click', () => {
+  document.getElementById('query').value = qbCurrentSql;
   document.getElementById('query-section').open = true;
   document.getElementById('query-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
