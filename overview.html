@@ -71,10 +71,43 @@
     .data-table-wrap tbody tr:hover { background: var(--muted); }
     .data-table-wrap thead th i { margin-left: 0.4rem; font-size: 0.75rem; color: var(--muted-foreground); }
     .data-table-wrap thead th.sorted i { color: var(--foreground); }
+
+    /* Sidebar — matches SURF Curve's sidebar component structure/classes */
+    #app-shell { display: flex; min-height: 100vh; }
+    #sidebar { width: 16rem; flex-shrink: 0; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+    #sidebar-header { padding: 4.4rem 0.75rem 0.75rem; }
+    #sidebar-content { flex: 1; overflow-y: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .sidebar-group-label { font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground); padding: 0 0.5rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: .04em; }
+    .sidebar-menu { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+    .sidebar-menu-button { display: flex; align-items: center; justify-content: flex-start; gap: 0.5rem; width: 100%; padding: 0.4rem 0.5rem; border-radius: var(--radius-sm); border: none; background: none; font-family: var(--font-sans); font-size: 0.85rem; text-align: left; cursor: pointer; color: var(--foreground); }
+    .sidebar-menu-button:hover { background: var(--muted); }
+    .sidebar-menu-button.selected { background: var(--accent); color: var(--primary); font-weight: 600; }
+    .sidebar-menu-sub { list-style: none; margin: 0.15rem 0 0.15rem 1.1rem; padding-left: 0.6rem; border-left: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.1rem; }
+    .sidebar-menu-sub-button { display: flex; align-items: center; justify-content: flex-start; gap: 0.4rem; width: 100%; padding: 0.3rem 0.5rem; border-radius: var(--radius-sm); border: none; background: none; font-family: var(--font-sans); font-size: 0.8rem; text-align: left; cursor: pointer; color: var(--muted-foreground); }
+    .sidebar-menu-sub-button:hover { background: var(--muted); color: var(--foreground); }
+    .sidebar-menu-sub-button.selected { background: var(--accent); color: var(--primary); font-weight: 600; }
+    .sidebar-menu-subsub { list-style: none; margin: 0.1rem 0 0.1rem 1.1rem; padding-left: 0.6rem; border-left: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.05rem; max-height: 16rem; overflow-y: auto; }
+    .sidebar-menu-subsub-button { display: flex; align-items: center; justify-content: flex-start; gap: 0.4rem; width: 100%; padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); border: none; background: none; font-family: var(--font-sans); font-size: 0.75rem; text-align: left; cursor: pointer; color: var(--muted-foreground); }
+    .sidebar-menu-subsub-button:hover { background: var(--muted); color: var(--foreground); }
+    .sidebar-menu-subsub-button i { width: 0.9rem; text-align: center; flex-shrink: 0; color: var(--muted-foreground); }
+    #main-content { flex: 1; min-width: 0; }
+    @media (max-width: 768px) { #sidebar { display: none; } }
   </style>
 </head>
 <body>
-  <article class="container">
+  <div id="app-shell">
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        <button id="sidebar-catalog-btn" class="sidebar-menu-button selected" type="button">
+          <i class="fa-solid fa-database"></i><span>Catalog</span>
+        </button>
+      </div>
+      <div id="sidebar-content">
+        <div class="sidebar-group-label">Schemas</div>
+        <ul id="sidebar-schema-list" class="sidebar-menu"></ul>
+      </div>
+    </aside>
+  <article class="container" id="main-content">
     <header class="page-header">
       <!-- SURF logo -->
       <div id="surf-logo">
@@ -158,6 +191,7 @@
       <div id="results"></div>
     </details>
   </article>
+  </div>
 
   <script type="module">
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -252,29 +286,83 @@ function resolveCatalogUrl() {
 
 const state = {
   conn: null,
+  catalogUrl: null,  // URL of the currently connected catalog (for syncUrl)
   catalogName: null, // catalog 'name' metadata key, if set (falls back to "Catalog")
   schema: null,      // selected schema name (L3+)
   tableId: null,     // selected table id (L4)
   tableName: null,   // selected table name (L4)
 };
 
-// ── Breadcrumb / accordion collapse ─────────────────────────────────────────
-// Single-path drill-down: the catalog itself is the root card, then one
-// schema selected at a time, one dataset within it. Re-selecting the active
-// card (or a breadcrumb crumb) collapses back to that level instead of
-// navigating away from the cards above it.
+// ── Breadcrumb / sidebar / accordion collapse ───────────────────────────────
+// Single-path drill-down: the catalog itself is the root, then one schema
+// selected at a time, one dataset within it. Every schema/dataset has two
+// on-screen representations (a card and a sidebar button) that must always
+// agree, so selection is key-based (data-schema / data-table-id), not
+// element-based: selecting "schema X" updates every element tagged with
+// that key, regardless of which one was actually clicked. Re-selecting the
+// active card/sidebar-item (or a breadcrumb crumb) collapses back to that
+// level instead of navigating away from the levels above it.
 
-function markSelected(gridSelector, cardEl) {
-  document.querySelectorAll(`${gridSelector} .info-card`).forEach(c => {
-    c.classList.toggle('selected', c === cardEl);
-    c.classList.toggle('unselected', c !== cardEl);
+function syncSchemaActive(schemaName) {
+  document.querySelectorAll('#schemas-grid [data-schema], #sidebar-schema-list [data-schema]').forEach(el => {
+    const match = el.dataset.schema === schemaName;
+    el.classList.toggle('selected', match);
+    el.classList.toggle('unselected', schemaName != null && !match);
   });
 }
 
-function clearSelected(gridSelector) {
-  document.querySelectorAll(`${gridSelector} .info-card`).forEach(c => {
-    c.classList.remove('selected', 'unselected');
+function syncDatasetActive(tableId) {
+  document.querySelectorAll('#datasets-grid [data-table-id], #sidebar-content [data-table-id]').forEach(el => {
+    const match = el.dataset.tableId === tableId;
+    el.classList.toggle('selected', match);
+    el.classList.toggle('unselected', tableId != null && !match);
   });
+}
+
+function findSidebarSchemaItem(schemaName) {
+  return Array.from(document.querySelectorAll('#sidebar-schema-list > li'))
+    .find(li => li.dataset.schemaItem === schemaName);
+}
+
+function findSidebarDatasetItem(tableId) {
+  return Array.from(document.querySelectorAll('#sidebar-schema-list .sidebar-menu-sub > li'))
+    .find(li => li.dataset.tableItem === tableId);
+}
+
+function clearSidebarDatasets() {
+  document.querySelectorAll('#sidebar-schema-list .sidebar-menu-sub').forEach(el => el.remove());
+}
+
+function clearSidebarColumns() {
+  document.querySelectorAll('#sidebar-schema-list .sidebar-menu-subsub').forEach(el => el.remove());
+}
+
+// Icon per DuckDB column type, matching the DuckDB UI Catalog Explorer's type-icon convention.
+function columnTypeIcon(type) {
+  const t = (type || '').toUpperCase();
+  if (t.startsWith('STRUCT')) return 'fa-solid fa-code';
+  if (t.endsWith('[]') || t.startsWith('LIST') || t.startsWith('MAP')) return 'fa-solid fa-list';
+  if (t.includes('BOOL')) return 'fa-solid fa-toggle-on';
+  if (t.includes('DATE') || t.includes('TIME') || t.includes('INTERVAL')) return 'fa-solid fa-calendar';
+  if (t.includes('BLOB')) return 'fa-solid fa-file';
+  if (t.includes('DOUBLE') || t.includes('FLOAT') || t.includes('DECIMAL') || t.includes('NUMERIC') || t.includes('REAL')) return 'fa-solid fa-calculator';
+  if (t.includes('INT')) return 'fa-solid fa-hashtag';
+  if (t.includes('UUID') || t.includes('VARCHAR') || t.includes('CHAR') || t.includes('TEXT')) return 'fa-solid fa-font';
+  return 'fa-solid fa-question';
+}
+
+function encodeParam(v) {
+  // encodeURIComponent escapes / and : too, which is technically correct but makes for an
+  // ugly, unreadable address bar — both are safe to leave literal in a query string (RFC 3986
+  // allows them unescaped there), so put them back for a human-shareable URL.
+  return encodeURIComponent(v).replace(/%2F/g, '/').replace(/%3A/g, ':');
+}
+
+function syncUrl() {
+  const parts = [`catalog=${encodeParam(state.catalogUrl)}`];
+  if (state.schema) parts.push(`schema=${encodeParam(state.schema)}`);
+  if (state.tableName) parts.push(`table=${encodeParam(state.tableName)}`);
+  history.replaceState(null, '', `${window.location.pathname}?${parts.join('&')}`);
 }
 
 function renderBreadcrumb() {
@@ -298,16 +386,17 @@ function renderBreadcrumb() {
   }
 }
 
-function toggleCatalog(cardEl) {
+function toggleCatalog() {
   const schemasSection = document.getElementById('schemas-section');
   const willExpand = schemasSection.style.display === 'none';
+  const catalogEls = document.querySelectorAll('#catalog-content .info-card, #sidebar-catalog-btn');
   if (willExpand) {
     schemasSection.style.display = 'block';
-    cardEl.classList.add('selected');
+    catalogEls.forEach(el => el.classList.add('selected'));
     renderBreadcrumb();
   } else {
     schemasSection.style.display = 'none';
-    cardEl.classList.remove('selected');
+    catalogEls.forEach(el => el.classList.remove('selected'));
     collapseDatasets();
   }
 }
@@ -317,30 +406,39 @@ function collapseDatasets() {
   document.getElementById('datasets-grid').innerHTML = '';
   document.getElementById('columns-section').style.display = 'none';
   document.getElementById('columns-content').innerHTML = '';
+  clearSidebarDatasets();
   state.schema = null;
   state.tableId = null;
   state.tableName = null;
-  clearSelected('#schemas-section');
+  syncSchemaActive(null);
   renderBreadcrumb();
+  syncUrl();
 }
 
 function collapseColumns() {
   document.getElementById('columns-section').style.display = 'none';
   document.getElementById('columns-content').innerHTML = '';
+  clearSidebarColumns();
   state.tableId = null;
   state.tableName = null;
-  clearSelected('#datasets-section');
+  syncDatasetActive(null);
   renderBreadcrumb();
+  syncUrl();
 }
 
 // ── Connect ──────────────────────────────────────────────────────────────────
 
+let isInitialConnect = true;
+
 async function connect(catalogUrl) {
   clearError();
+  state.catalogUrl = catalogUrl;
   collapseDatasets();
   document.getElementById('schemas-section').style.display = 'block';
+  document.getElementById('sidebar-catalog-btn').classList.add('selected');
   document.getElementById('catalog-content').innerHTML = '<p style="color:var(--muted-foreground)">Connecting…</p>';
   document.getElementById('schemas-grid').innerHTML = '';
+  document.getElementById('sidebar-schema-list').innerHTML = '';
   try {
     if (state.conn) { try { state.conn.close(); } catch (_) {} }
     state.conn = await freshConn();
@@ -352,10 +450,29 @@ async function connect(catalogUrl) {
     document.getElementById('connection_command').textContent =
       `ATTACH 'ducklake:${catalogUrl}' AS db; USE db;`;
     await renderDashboard();
+    if (isInitialConnect) {
+      isInitialConnect = false;
+      await restoreSelectionFromUrl();
+    }
   } catch (e) {
     showError('Connection failed: ' + e.message);
     document.getElementById('catalog-content').innerHTML = '';
   }
+}
+
+async function restoreSelectionFromUrl() {
+  // Uses the params captured at boot (initialSchemaParam/initialTableParam) rather than
+  // re-parsing the URL here — by this point syncUrl() calls from the initial connect's own
+  // state resets have already rewritten the address bar, so window.location.search no
+  // longer has them.
+  if (!initialSchemaParam || !findSidebarSchemaItem(initialSchemaParam)) return;
+  await selectSchema(initialSchemaParam);
+
+  if (!initialTableParam) return;
+  const tableBtn = Array.from(document.querySelectorAll('#datasets-grid [data-table-name]'))
+    .find(el => el.dataset.tableName === initialTableParam);
+  if (!tableBtn) return;
+  await selectDataset(initialSchemaParam, tableBtn.dataset.tableId, initialTableParam);
 }
 
 // ── Data table (shared by L4 columns + query results) ───────────────────────
@@ -574,7 +691,9 @@ async function renderL1(conn) {
       <i class="fa-solid fa-clock"></i> ${fmtDate(r.last_modified)}
     </div>
   `;
-  card.addEventListener('click', () => toggleCatalog(card));
+  card.addEventListener('click', toggleCatalog);
+
+  document.querySelector('#sidebar-catalog-btn span').textContent = catalogName || 'Catalog';
 
   const catalogContent = document.getElementById('catalog-content');
   catalogContent.innerHTML = '';
@@ -611,6 +730,7 @@ async function renderL2(conn) {
   rows.forEach(r => {
     const card = document.createElement('div');
     card.className = 'info-card';
+    card.dataset.schema = r.schema_name;
     card.innerHTML = `
       <h3>${r.schema_name}</h3>
       <div class="card-meta">
@@ -620,13 +740,38 @@ async function renderL2(conn) {
         <i class="fa-solid fa-clock"></i> ${fmtDate(r.last_modified)}
       </div>
     `;
-    card.addEventListener('click', () => selectSchema(card, r.schema_name));
+    card.addEventListener('click', () => selectSchema(r.schema_name));
     grid.appendChild(card);
   });
 
   const schemasGrid = document.getElementById('schemas-grid');
   schemasGrid.innerHTML = '';
   schemasGrid.appendChild(grid);
+
+  renderSidebarSchemas(rows);
+}
+
+function renderSidebarSchemas(rows) {
+  const list = document.getElementById('sidebar-schema-list');
+  list.innerHTML = '';
+  rows.forEach(r => {
+    const li = document.createElement('li');
+    li.dataset.schemaItem = r.schema_name;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sidebar-menu-button';
+    btn.dataset.schema = r.schema_name;
+    btn.innerHTML = `<i class="fa-solid fa-layer-group"></i><span>${r.schema_name}</span>`;
+    btn.addEventListener('click', () => {
+      const wasActive = state.schema === r.schema_name;
+      selectSchema(r.schema_name);
+      if (!wasActive) {
+        document.getElementById('datasets-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+    li.appendChild(btn);
+    list.appendChild(li);
+  });
 }
 
 // ── L3: Table cards ─────────────────────────────────────────────────────────
@@ -659,6 +804,8 @@ async function renderL3(conn, schemaName, container) {
   rows.forEach(r => {
     const card = document.createElement('div');
     card.className = 'info-card';
+    card.dataset.tableId = String(r.table_id);
+    card.dataset.tableName = r.table_name;
     card.innerHTML = `
       <h3>${r.table_name}</h3>
       ${r.description ? `<div class="card-desc">${r.description}</div>` : ''}
@@ -668,30 +815,84 @@ async function renderL3(conn, schemaName, container) {
         <i class="fa-solid fa-clock"></i> ${fmtDate(r.last_modified)}
       </div>
     `;
-    card.addEventListener('click', () => selectDataset(card, schemaName, r.table_id, r.table_name));
+    card.addEventListener('click', () => selectDataset(schemaName, r.table_id, r.table_name));
     grid.appendChild(card);
   });
 
   container.innerHTML = '';
   container.appendChild(grid);
+
+  renderSidebarDatasets(schemaName, rows);
 }
 
-async function selectSchema(cardEl, schemaName) {
+function renderSidebarDatasets(schemaName, rows) {
+  clearSidebarDatasets();
+  const li = findSidebarSchemaItem(schemaName);
+  if (!li) return;
+  const sub = document.createElement('ul');
+  sub.className = 'sidebar-menu-sub';
+  rows.forEach(r => {
+    const subLi = document.createElement('li');
+    subLi.dataset.tableItem = String(r.table_id);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sidebar-menu-sub-button';
+    btn.dataset.tableId = String(r.table_id);
+    btn.dataset.tableName = r.table_name;
+    btn.innerHTML = `<i class="fa-solid fa-table"></i><span>${r.table_name}</span>`;
+    btn.addEventListener('click', () => {
+      const wasActive = state.tableId === String(r.table_id);
+      selectDataset(schemaName, r.table_id, r.table_name);
+      if (!wasActive) {
+        document.getElementById('columns-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+    subLi.appendChild(btn);
+    sub.appendChild(subLi);
+  });
+  li.appendChild(sub);
+}
+
+function renderSidebarColumns(tableId, rows) {
+  clearSidebarColumns();
+  const li = findSidebarDatasetItem(String(tableId));
+  if (!li) return;
+  const sub = document.createElement('ul');
+  sub.className = 'sidebar-menu-subsub';
+  rows.forEach(r => {
+    const subLi = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sidebar-menu-subsub-button';
+    btn.title = r.column_type;
+    btn.innerHTML = `<i class="${columnTypeIcon(r.column_type)}"></i><span>${r.column_name}</span>`;
+    btn.addEventListener('click', () => {
+      document.getElementById('columns-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    subLi.appendChild(btn);
+    sub.appendChild(subLi);
+  });
+  li.appendChild(sub);
+}
+
+async function selectSchema(schemaName) {
   if (state.schema === schemaName) {
     collapseDatasets();
     return;
   }
-  markSelected('#schemas-section', cardEl);
+  syncSchemaActive(schemaName);
   state.schema = schemaName;
   state.tableId = null;
   state.tableName = null;
   renderBreadcrumb();
+  syncUrl();
 
   document.getElementById('columns-section').style.display = 'none';
   document.getElementById('columns-content').innerHTML = '';
   document.getElementById('datasets-section').style.display = 'block';
   const datasetsGrid = document.getElementById('datasets-grid');
   setLoading(datasetsGrid);
+  clearSidebarDatasets();
   clearError();
   try {
     await renderL3(state.conn, schemaName, datasetsGrid);
@@ -740,21 +941,26 @@ async function renderL4(conn, schemaName, tableId, tableName, container) {
     filterPlaceholder: 'Filter columns…',
     exportFilename: `${schemaName}.${tableName}.columns.csv`,
   });
+
+  renderSidebarColumns(tableId, rows);
 }
 
-async function selectDataset(cardEl, schemaName, tableId, tableName) {
+async function selectDataset(schemaName, tableId, tableName) {
+  tableId = String(tableId);
   if (state.tableId === tableId) {
     collapseColumns();
     return;
   }
-  markSelected('#datasets-section', cardEl);
+  syncDatasetActive(tableId);
   state.tableId = tableId;
   state.tableName = tableName;
   renderBreadcrumb();
+  syncUrl();
 
   document.getElementById('columns-section').style.display = 'block';
   const columnsContent = document.getElementById('columns-content');
   setLoading(columnsContent);
+  clearSidebarColumns();
   clearError();
   try {
     await renderL4(state.conn, schemaName, tableId, tableName, columnsContent);
@@ -781,6 +987,10 @@ async function renderDashboard() {
 
 const catalogUrl = resolveCatalogUrl();
 document.getElementById('catalog-url').value = catalogUrl;
+// Captured once, before any syncUrl() call rewrites the address bar (see restoreSelectionFromUrl).
+const initialUrlParams = new URLSearchParams(window.location.search);
+const initialSchemaParam = initialUrlParams.get('schema');
+const initialTableParam = initialUrlParams.get('table');
 
 document.getElementById('btn-connect').addEventListener('click', () => {
   const url = document.getElementById('catalog-url').value.trim();
@@ -788,6 +998,14 @@ document.getElementById('btn-connect').addEventListener('click', () => {
 });
 
 document.getElementById('btn-run').addEventListener('click', runUserQuery);
+
+document.getElementById('sidebar-catalog-btn').addEventListener('click', () => {
+  const wasHidden = document.getElementById('schemas-section').style.display === 'none';
+  toggleCatalog();
+  if (wasHidden) {
+    document.getElementById('schemas-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+});
 
 // Auto-connect on load
 connect(catalogUrl);
