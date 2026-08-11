@@ -72,11 +72,30 @@
     .data-table-wrap thead th i { margin-left: 0.4rem; font-size: 0.75rem; color: var(--muted-foreground); }
     .data-table-wrap thead th.sorted i { color: var(--foreground); }
 
+    /* Table Explorer */
+    .explorer-list { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+    .explorer-node { border-bottom: 1px solid var(--border); }
+    .explorer-node:last-child { border-bottom: none; }
+    .explorer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.55rem 0.75rem; font-size: 0.85rem; }
+    .explorer-row:hover { background: var(--muted); }
+    .explorer-col-name { display: flex; align-items: center; gap: 0.5rem; width: 220px; flex-shrink: 0; font-weight: 500; }
+    .explorer-col-name .col-type { color: var(--muted-foreground); font-family: var(--font-mono); font-size: 0.72rem; font-weight: 400; }
+    .explorer-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; color: var(--muted-foreground); flex: 1; min-width: 0; }
+    .explorer-stats b { color: var(--foreground); font-weight: 600; }
+    .explorer-loading { color: var(--muted-foreground); font-style: italic; }
+    .explorer-hist { display: flex; align-items: flex-end; gap: 1px; height: 28px; width: 110px; flex-shrink: 0; }
+    .explorer-hist div { flex: 1; background: var(--primary); border-radius: 1px 1px 0 0; min-height: 1px; }
+    .explorer-expand-btn { background: none; border: none; cursor: pointer; color: var(--link); font-size: 0.8rem; padding: 0; font-family: var(--font-sans); }
+    .explorer-children { margin: 0 0 0.5rem 1.9rem; padding-left: 0.75rem; border-left: 1px solid var(--border); }
+    .explorer-children .explorer-list { border: none; border-radius: 0; }
+    .explorer-children .explorer-node { border-bottom: none; }
+
     /* Sidebar — matches SURF Curve's sidebar component structure/classes */
     #app-shell { display: flex; min-height: 100vh; }
     #sidebar { width: 16rem; flex-shrink: 0; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
     #sidebar-header { padding: 4.4rem 0.75rem 0.75rem; }
     #sidebar-content { flex: 1; overflow-y: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    #sidebar-footer { padding: 0.5rem; border-top: 1px solid var(--border); }
     .sidebar-group-label { font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground); padding: 0 0.5rem; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: .04em; }
     .sidebar-menu { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; }
     .sidebar-menu-button { display: flex; align-items: center; justify-content: flex-start; gap: 0.5rem; width: 100%; padding: 0.4rem 0.5rem; border-radius: var(--radius-sm); border: none; background: none; font-family: var(--font-sans); font-size: 0.85rem; text-align: left; cursor: pointer; color: var(--foreground); }
@@ -105,6 +124,11 @@
       <div id="sidebar-content">
         <div class="sidebar-group-label">Schemas</div>
         <ul id="sidebar-schema-list" class="sidebar-menu"></ul>
+      </div>
+      <div id="sidebar-footer">
+        <button id="sidebar-query-btn" class="sidebar-menu-button" type="button">
+          <i class="fa-solid fa-terminal"></i><span>Query</span>
+        </button>
       </div>
     </aside>
   <article class="container" id="main-content">
@@ -178,10 +202,16 @@
         <h2>Columns</h2>
         <div id="columns-content"></div>
       </section>
+      <section id="explorer-section" style="display:none;margin-top:1.5rem">
+        <h2>Table Explorer</h2>
+        <p class="section-hint">Approximate profile from a 10,000-row sample. Click a struct/list column to expand it.</p>
+        <div id="explorer-content"></div>
+      </section>
     </div>
 
     <!-- Query panel (always visible) -->
-    <details id="query-section" style="margin-top:2rem">
+    <h2 id="query-heading" style="margin-top:2rem">Query</h2>
+    <details id="query-section">
       <summary>Query the data right here</summary>
       <div id="query-row">
         <input id="query" type="text" value="SELECT * FROM openapc.apc LIMIT 10" />
@@ -334,7 +364,7 @@ function clearSidebarDatasets() {
 }
 
 function clearSidebarColumns() {
-  document.querySelectorAll('#sidebar-schema-list .sidebar-menu-subsub').forEach(el => el.remove());
+  document.querySelectorAll('#sidebar-schema-list .sidebar-menu-subsub, #sidebar-schema-list .sidebar-explorer-link').forEach(el => el.remove());
 }
 
 // Icon per DuckDB column type, matching the DuckDB UI Catalog Explorer's type-icon convention.
@@ -349,6 +379,30 @@ function columnTypeIcon(type) {
   if (t.includes('INT')) return 'fa-solid fa-hashtag';
   if (t.includes('UUID') || t.includes('VARCHAR') || t.includes('CHAR') || t.includes('TEXT')) return 'fa-solid fa-font';
   return 'fa-solid fa-question';
+}
+
+function isCompositeType(type) {
+  const t = (type || '').toUpperCase();
+  return t.startsWith('STRUCT') || t.startsWith('LIST') || t.startsWith('MAP') || t.endsWith('[]');
+}
+
+function isListType(type) {
+  const t = (type || '').toUpperCase();
+  return t.startsWith('LIST') || t.endsWith('[]');
+}
+
+function isTemporalType(type) {
+  return /DATE|TIME/.test((type || '').toUpperCase());
+}
+
+function isNumericType(type) {
+  const t = (type || '').toUpperCase();
+  return !isCompositeType(type) && !t.includes('BOOL')
+    && (t.includes('INT') || t.includes('DOUBLE') || t.includes('FLOAT') || t.includes('DECIMAL') || t.includes('NUMERIC') || t.includes('REAL'));
+}
+
+function isBoolType(type) {
+  return (type || '').toUpperCase().includes('BOOL');
 }
 
 function encodeParam(v) {
@@ -406,6 +460,9 @@ function collapseDatasets() {
   document.getElementById('datasets-grid').innerHTML = '';
   document.getElementById('columns-section').style.display = 'none';
   document.getElementById('columns-content').innerHTML = '';
+  document.getElementById('explorer-section').style.display = 'none';
+  document.getElementById('explorer-content').innerHTML = '';
+  explorerToken += 1;
   clearSidebarDatasets();
   state.schema = null;
   state.tableId = null;
@@ -418,6 +475,9 @@ function collapseDatasets() {
 function collapseColumns() {
   document.getElementById('columns-section').style.display = 'none';
   document.getElementById('columns-content').innerHTML = '';
+  document.getElementById('explorer-section').style.display = 'none';
+  document.getElementById('explorer-content').innerHTML = '';
+  explorerToken += 1;
   clearSidebarColumns();
   state.tableId = null;
   state.tableName = null;
@@ -857,6 +917,16 @@ function renderSidebarColumns(tableId, rows) {
   clearSidebarColumns();
   const li = findSidebarDatasetItem(String(tableId));
   if (!li) return;
+
+  const explorerBtn = document.createElement('button');
+  explorerBtn.type = 'button';
+  explorerBtn.className = 'sidebar-menu-subsub-button sidebar-explorer-link';
+  explorerBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i><span>Table Explorer</span>';
+  explorerBtn.addEventListener('click', () => {
+    document.getElementById('explorer-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  li.appendChild(explorerBtn);
+
   const sub = document.createElement('ul');
   sub.className = 'sidebar-menu-subsub';
   rows.forEach(r => {
@@ -898,6 +968,248 @@ async function selectSchema(schemaName) {
     await renderL3(state.conn, schemaName, datasetsGrid);
   } catch (e) {
     showError('Failed to load schema: ' + e.message);
+  }
+}
+
+// ── Table Explorer ───────────────────────────────────────────────────────────
+// Per-column profile (null %, cardinality, min/max, histogram) computed from a
+// USING SAMPLE 10000 ROWS query per column, run sequentially — never combined,
+// never a full scan. Benchmarked against the live catalog: combining columns in
+// one query let a single high-cardinality VARCHAR column balloon a 20k-row
+// sampled query to 659s; one query per column keeps each one's cost isolated
+// and lets the panel render progressively instead of blocking on the slowest
+// column. Struct/list columns show an expand toggle instead (built from
+// ducklake_column's parent_column tree — schema metadata, not data, so it's
+// cheap regardless of table size) rather than a stats query.
+
+function toEpochSeconds(v) {
+  if (v instanceof Date) return v.getTime() / 1000;
+  if (typeof v === 'bigint') return Number(v);
+  return v;
+}
+
+async function fetchColumnTree(conn, tableId) {
+  const rows = await runQuery(conn, `
+    SELECT column_id, column_name, column_type, parent_column
+    FROM __ducklake_metadata_db.ducklake_column
+    WHERE table_id = ${tableId} AND end_snapshot IS NULL
+    ORDER BY column_order
+  `);
+  rows.forEach(r => {
+    r.column_id = String(r.column_id);
+    r.parent_column = r.parent_column == null ? null : String(r.parent_column);
+  });
+  return rows;
+}
+
+async function fetchHistogram(conn, sampleFrom, mn, mx, temporal) {
+  const expr = temporal ? 'epoch(v)' : 'v';
+  const mnNum = toEpochSeconds(mn);
+  const mxNum = toEpochSeconds(mx);
+  const rows = await runQuery(conn, `
+    SELECT LEAST(9, GREATEST(0, FLOOR((${expr} - ${mnNum}) * 10.0 / NULLIF(${mxNum} - ${mnNum}, 0)))) AS bucket, count(*) AS cnt
+    FROM ${sampleFrom}
+    WHERE v IS NOT NULL
+    GROUP BY bucket ORDER BY bucket
+  `);
+  const buckets = new Array(10).fill(0);
+  rows.forEach(r => { const b = Number(r.bucket); if (b >= 0 && b < 10) buckets[b] = Number(r.cnt); });
+  return buckets;
+}
+
+async function fetchColumnStats(conn, schemaName, tableName, pathExpr, type) {
+  const sampleFrom = `(SELECT ${pathExpr} AS v FROM ${quoteIdent(schemaName)}.${quoteIdent(tableName)} USING SAMPLE 10000 ROWS)`;
+
+  // count()/approx_count_distinct() are BIGINT-typed, which duckdb-wasm returns as JS BigInt
+  // (same class of bug as the earlier fmtSize fix) — normalize to Number immediately so no
+  // caller has to remember not to do raw arithmetic on these.
+  if (isBoolType(type)) {
+    const r = (await runQuery(conn, `SELECT count(*) n, count(v) nonnull, count(*) FILTER (WHERE v) t, count(*) FILTER (WHERE NOT v) f FROM ${sampleFrom}`))[0];
+    return { kind: 'bool', n: Number(r.n), nonnull: Number(r.nonnull), t: Number(r.t), f: Number(r.f) };
+  }
+
+  const r = (await runQuery(conn, `SELECT count(*) n, count(v) nonnull, approx_count_distinct(v) distinctCount, min(v) mn, max(v) mx FROM ${sampleFrom}`))[0];
+  let histogram = null;
+  if ((isNumericType(type) || isTemporalType(type)) && r.mn != null && r.mx != null && String(r.mn) !== String(r.mx)) {
+    histogram = await fetchHistogram(conn, sampleFrom, r.mn, r.mx, isTemporalType(type));
+  }
+  return { kind: 'scalar', n: Number(r.n), nonnull: Number(r.nonnull), distinctCount: Number(r.distinctCount), mn: r.mn, mx: r.mx, histogram };
+}
+
+async function fetchListLengthStats(conn, schemaName, tableName, pathExpr) {
+  const r = (await runQuery(conn, `
+    SELECT count(*) n, min(len(v)) mn, avg(len(v)) avgLen, max(len(v)) mx,
+           count(*) FILTER (WHERE v IS NULL OR len(v) = 0) empties
+    FROM (SELECT ${pathExpr} AS v FROM ${quoteIdent(schemaName)}.${quoteIdent(tableName)} USING SAMPLE 10000 ROWS)
+  `))[0];
+  return { n: Number(r.n), mn: Number(r.mn), avgLen: Number(r.avgLen), mx: Number(r.mx), empties: Number(r.empties) };
+}
+
+function renderStatsHtml(stats) {
+  const nullPct = stats.n ? (100 * (stats.n - stats.nonnull) / stats.n) : 0;
+  if (stats.kind === 'bool') {
+    return `<span>true: <b>${fmtNum(stats.t)}</b></span><span>false: <b>${fmtNum(stats.f)}</b></span><span>${nullPct.toFixed(0)}% null</span>`;
+  }
+  let html = `<span>~<b>${fmtNum(stats.distinctCount)}</b> distinct</span>`
+    + `<span>${nullPct.toFixed(0)}% null</span>`
+    + `<span>${formatCellValue(stats.mn)} – ${formatCellValue(stats.mx)}</span>`;
+  if (stats.histogram) {
+    const peak = Math.max(...stats.histogram, 1);
+    html += `<div class="explorer-hist">${stats.histogram.map(c => `<div style="height:${Math.max(2, c / peak * 28)}px" title="${c}"></div>`).join('')}</div>`;
+  }
+  return html;
+}
+
+function explorerRowSkeleton(col) {
+  const row = document.createElement('div');
+  row.className = 'explorer-row';
+  row.innerHTML = `<div class="explorer-col-name"><i class="${columnTypeIcon(col.column_type)}"></i><span>${col.column_name}</span><span class="col-type">${col.column_type}</span></div>`;
+  const bodyEl = document.createElement('div');
+  bodyEl.className = 'explorer-stats';
+  bodyEl.innerHTML = '<span class="explorer-loading">Loading…</span>';
+  row.appendChild(bodyEl);
+  return { row, bodyEl };
+}
+
+function buildLeafNode(conn, schemaName, tableName, col, pathExpr) {
+  const { row, bodyEl } = explorerRowSkeleton(col);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'explorer-node';
+  wrapper.appendChild(row);
+  async function loadStats() {
+    try {
+      const stats = await fetchColumnStats(conn, schemaName, tableName, pathExpr, col.column_type);
+      bodyEl.innerHTML = renderStatsHtml(stats);
+    } catch (e) {
+      bodyEl.innerHTML = '<span class="explorer-loading">unavailable</span>';
+    }
+  }
+  return { el: wrapper, loadStats };
+}
+
+// Schema-only tree (name/type/icon, no stats query) for fields reached through a LIST —
+// getting per-field value stats there needs UNNEST (changes row cardinality, real added
+// cost/complexity) which is out of scope; still lets you see the nested shape.
+function buildSchemaOnlyNode(tree, col) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'explorer-node';
+  const { row, bodyEl } = explorerRowSkeleton(col);
+  const children = tree.filter(c => c.parent_column === col.column_id);
+  if (isCompositeType(col.column_type) && children.length) {
+    let expanded = false;
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'explorer-expand-btn';
+    const label = () => `${expanded ? '▾' : '▸'} ${children.length} field${children.length !== 1 ? 's' : ''}`;
+    toggleBtn.textContent = label();
+    bodyEl.innerHTML = '';
+    bodyEl.appendChild(toggleBtn);
+    const childrenContainer = document.createElement('div');
+    childrenContainer.className = 'explorer-children';
+    childrenContainer.style.display = 'none';
+    let built = false;
+    toggleBtn.addEventListener('click', () => {
+      expanded = !expanded;
+      toggleBtn.textContent = label();
+      childrenContainer.style.display = expanded ? 'block' : 'none';
+      if (!built) {
+        built = true;
+        children.forEach(c => childrenContainer.appendChild(buildSchemaOnlyNode(tree, c)));
+      }
+    });
+    wrapper.appendChild(row);
+    wrapper.appendChild(childrenContainer);
+  } else {
+    bodyEl.innerHTML = '';
+    wrapper.appendChild(row);
+  }
+  return wrapper;
+}
+
+function buildCompositeNode(conn, schemaName, tableName, tree, col, pathExpr) {
+  const { row, bodyEl } = explorerRowSkeleton(col);
+  const isList = isListType(col.column_type);
+  const children = tree.filter(c => c.parent_column === col.column_id);
+
+  let expanded = false, loaded = false;
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'explorer-expand-btn';
+  const label = () => `${expanded ? '▾' : '▸'} ${children.length} field${children.length !== 1 ? 's' : ''}`;
+  toggleBtn.textContent = label();
+  bodyEl.innerHTML = '';
+  bodyEl.appendChild(toggleBtn);
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'explorer-node';
+  wrapper.appendChild(row);
+  const childrenContainer = document.createElement('div');
+  childrenContainer.className = 'explorer-children';
+  childrenContainer.style.display = 'none';
+  wrapper.appendChild(childrenContainer);
+
+  toggleBtn.addEventListener('click', async () => {
+    expanded = !expanded;
+    toggleBtn.textContent = label();
+    childrenContainer.style.display = expanded ? 'block' : 'none';
+    if (loaded) return;
+    loaded = true;
+
+    if (isList) {
+      const lenEl = document.createElement('span');
+      lenEl.className = 'explorer-loading';
+      lenEl.textContent = 'Loading list length…';
+      bodyEl.appendChild(lenEl);
+      try {
+        const s = await fetchListLengthStats(conn, schemaName, tableName, pathExpr);
+        lenEl.className = '';
+        lenEl.innerHTML = `avg <b>${Number(s.avgLen).toFixed(1)}</b> items/row (${fmtNum(s.mn)}–${fmtNum(s.mx)}), ${s.n ? (100 * s.empties / s.n).toFixed(0) : 0}% empty`;
+      } catch (e) {
+        lenEl.textContent = 'list length unavailable';
+      }
+      children.forEach(c => childrenContainer.appendChild(buildSchemaOnlyNode(tree, c)));
+    } else {
+      children.forEach(child => {
+        const childPath = `${pathExpr}.${quoteIdent(child.column_name)}`;
+        const node = isCompositeType(child.column_type)
+          ? buildCompositeNode(conn, schemaName, tableName, tree, child, childPath)
+          : buildLeafNode(conn, schemaName, tableName, child, childPath);
+        childrenContainer.appendChild(node.el);
+        if (node.loadStats) node.loadStats();
+      });
+    }
+  });
+
+  return { el: wrapper, loadStats: null };
+}
+
+// Sequential per-column queries can still be in flight if the user switches datasets quickly;
+// each render call gets a token so a stale run stops touching the DOM (and stops issuing
+// further queries) once a newer selection has superseded it.
+let explorerToken = 0;
+
+async function renderTableExplorer(conn, schemaName, tableName, tableId, container, token) {
+  container.innerHTML = '<p class="explorer-loading" style="padding:0.75rem">Loading column tree…</p>';
+  const tree = await fetchColumnTree(conn, tableId);
+  if (token !== explorerToken) return;
+  const topLevel = tree.filter(r => r.parent_column === null);
+
+  const list = document.createElement('div');
+  list.className = 'explorer-list';
+  container.innerHTML = '';
+  container.appendChild(list);
+
+  const leafNodes = [];
+  topLevel.forEach(col => {
+    const pathExpr = quoteIdent(col.column_name);
+    const node = isCompositeType(col.column_type)
+      ? buildCompositeNode(conn, schemaName, tableName, tree, col, pathExpr)
+      : buildLeafNode(conn, schemaName, tableName, col, pathExpr);
+    list.appendChild(node.el);
+    if (node.loadStats) leafNodes.push(node);
+  });
+
+  for (const node of leafNodes) {
+    if (token !== explorerToken) return;
+    await node.loadStats();
   }
 }
 
@@ -958,8 +1270,11 @@ async function selectDataset(schemaName, tableId, tableName) {
   syncUrl();
 
   document.getElementById('columns-section').style.display = 'block';
+  document.getElementById('explorer-section').style.display = 'block';
   const columnsContent = document.getElementById('columns-content');
+  const explorerContent = document.getElementById('explorer-content');
   setLoading(columnsContent);
+  explorerContent.innerHTML = '<p class="explorer-loading" style="padding:0.75rem">Loading column tree…</p>';
   clearSidebarColumns();
   clearError();
   try {
@@ -967,6 +1282,17 @@ async function selectDataset(schemaName, tableId, tableName) {
   } catch (e) {
     showError('Failed to load table: ' + e.message);
   }
+
+  // Not awaited: profiling runs progressively in the background so it never blocks the
+  // (fast) Columns table above it. Guarded by explorerToken against a rapid re-selection race.
+  explorerToken += 1;
+  const myExplorerToken = explorerToken;
+  renderTableExplorer(state.conn, schemaName, tableName, tableId, explorerContent, myExplorerToken)
+    .catch(e => {
+      if (myExplorerToken === explorerToken) {
+        explorerContent.innerHTML = `<p style="color:var(--destructive)">Failed to load table explorer: ${e.message}</p>`;
+      }
+    });
 }
 
 // ── Render dashboard (Tasks 3-6 progressive build) ──────────────────────────
@@ -1005,6 +1331,11 @@ document.getElementById('sidebar-catalog-btn').addEventListener('click', () => {
   if (wasHidden) {
     document.getElementById('schemas-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
+});
+
+document.getElementById('sidebar-query-btn').addEventListener('click', () => {
+  document.getElementById('query-section').open = true;
+  document.getElementById('query-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 // Auto-connect on load
