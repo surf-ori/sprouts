@@ -97,7 +97,7 @@ def _(config, mo):
             FROM (
                 SELECT *, unnest(authorship.institutions).ror AS ror
                 FROM (
-                	SELECT id, doi, unnest(authorships) as authorship
+                	SELECT id, case when doi == 'https://doi.org/' then null else doi end as doi, unnest(authorships) as authorship
             		FROM openalex.works
                 )
                 WHERE authorship.institutions IS NOT NULL
