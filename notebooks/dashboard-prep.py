@@ -115,41 +115,43 @@ def _(config, mo):
 @app.cell
 def _(config, mo):
     _df = mo.sql(
+
+
+@app.cell
+def _(config, mo):
+    expl = mo.sql(
         f"""
         -- select works from OpenAire that have at least one author who is affiliated with a Dutch organization
         -- each record represents one unique work-author-affiliation combination,
         -- so there might be multiple records for the same author if multiple affiliations are listed
+        -- optimized query
         copy (
-            select id, doi, ror, declaredAffiliation
+        	select
+                id,
+                unnest(
+                    ifnull(
+                        list('https://doi.org/' || pid.value) FILTER (pid.scheme = 'doi'), [null]
+                    )
+                ) as doi,
+            	ror,
+            	authorship
             from (
-                select *, unnest(declaredAffiliation.matchingOrganizations).ror as ror
+                select id, unnest(ifnull(pids, [null])) as pid, ror,
+            		{{'author': person, 'affiliation': declaredAffiliation}} as authorship
                 from (
-                    select product as id, unnest(declaredAffiliations) as declaredAffiliation
-                    from "openaire-11.1.1".authorships
+                    select *, unnest(declaredAffiliation.matchingOrganizations).ror as ror
+                    from (
+                        select person, product as id, unnest(declaredAffiliations) as declaredAffiliation 
+                        from "openaire-11.1.1".authorships
+                    )
+                )
+                join "openaire-11.1.1".publications
+                using (id)
+                where ror in (
+                        SELECT ROR_LINK FROM "nl-orgs".baseline
                 )
             )
-            join (
-                -- this query produces one record per doi
-                -- (could be multiple records per publication if multiple dois were assigned)
-                -- and one record per publication without doi
-                select
-                    id,
-                    unnest(
-                        ifnull(
-                            list('https://doi.org/' || pid.value) FILTER (pid.scheme = 'doi'), [null]
-                        )
-                    ) as doi,
-                    -- case when list(pid) != [null] then list(pid) end as pids
-                from (
-                    select *, unnest(ifnull(pids, [null])) as pid
-                    from "openaire-11.1.1".publications
-                )
-                group by id
-            )
-            using (id)
-            where ror in (
-                    SELECT ROR_LINK FROM "nl-orgs".baseline
-            )
+            group by (id, ror, authorship)
         ) to '{config["data-path"]}/pid2portal/openaire_NL_ror' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
 
         """
