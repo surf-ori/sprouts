@@ -9,9 +9,11 @@ def _():
     import marimo as mo
     import polars as pl
     import altair as alt
+    import datetime
     import json
+    import boto3
 
-    return json, mo
+    return boto3, datetime, json, mo
 
 
 @app.cell
@@ -29,27 +31,38 @@ def _(config_path, json):
     return (config,)
 
 
-@app.cell(hide_code=True)
-def _(mo):
+@app.cell
+def _(datetime):
+    local_catalog = f'catalog-{str(datetime.datetime.now()).replace(' ', 'T')}.ducklake'
+    local_catalog
+    return (local_catalog,)
+
+
+@app.cell
+def _(database, local_catalog, mo):
     _df = mo.sql(
         f"""
-        use memory; detach sprouts;
+        ATTACH 'https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts-dev/catalog.ducklake' AS remote;
+        ATTACH '{local_catalog}' AS local;
+        COPY FROM DATABASE remote to local;
+        DETACH remote; DETACH local;
         """
     )
     return
 
 
-@app.cell(hide_code=True)
-def _(mo):
+@app.cell
+def _(config, local_catalog, mo):
     _df = mo.sql(
         f"""
-        ATTACH 'ducklake:https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts-dev/catalog.ducklake' AS sprouts; USE sprouts;
+        ATTACH 'ducklake:{local_catalog}' AS sprouts (DATA_PATH '{config["data-path"]}', OVERRIDE_DATA_PATH true);
+        USE sprouts;
         """
     )
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
     _df = mo.sql(
         f"""
@@ -67,7 +80,7 @@ def _(mo):
     return
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(config, mo):
     _df = mo.sql(
         f"""
@@ -80,6 +93,16 @@ def _(config, mo):
             KEY_ID '{config["objectstore-key"]}',
             SECRET '{config["objectstore-secret"]}'
         );
+        """
+    )
+    return
+
+
+@app.cell
+def _(mo):
+    _df = mo.sql(
+        f"""
+        CREATE OR REPLACE SCHEMA pid2portal;
         """
     )
     return
@@ -106,7 +129,7 @@ def _(config, mo):
             	SELECT ROR_LINK FROM "nl-orgs".baseline
             )
         )
-        TO '{config["data-path"]}/pid2portal/openalex_NL_ror' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb', OVERWRITE)
+        TO '{config["data-path"]}/pid2portal/openalex_NL_ror' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
         """
     )
     return
@@ -115,6 +138,17 @@ def _(config, mo):
 @app.cell
 def _(config, mo):
     _df = mo.sql(
+        f"""
+        CREATE OR REPLACE TABLE pid2portal.openalex_NL_ror AS
+        	FROM '{config["data-path"]}/pid2portal/openalex_NL_ror/*.parquet'
+            WITH NO DATA;
+
+        CALL ducklake_add_data_files('sprouts', 'openalex_NL_ror', 
+                        '{config["data-path"]}/pid2portal/openalex_NL_ror/*.parquet',
+            			schema => 'pid2portal');
+        """
+    )
+    return
 
 
 @app.cell
@@ -153,6 +187,27 @@ def _(config, mo):
             )
             group by (id, ror, authorship)
         ) to '{config["data-path"]}/pid2portal/openaire_NL_ror' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
+        """
+    )
+    return
+
+
+@app.cell
+def _(config, mo):
+    _df = mo.sql(
+        f"""
+        CREATE OR REPLACE TABLE pid2portal.openaire_NL_ror AS
+        	FROM '{config["data-path"]}/pid2portal/openaire_NL_ror/*.parquet'
+            WITH NO DATA;
+
+        CALL ducklake_add_data_files('sprouts', 'openaire_NL_ror', 
+                        '{config["data-path"]}/pid2portal/openaire_NL_ror/*.parquet',
+            			schema => 'pid2portal');
+        """
+    )
+    return
+
+
 @app.cell
 def _(config, mo):
     _df = mo.sql(
@@ -186,6 +241,19 @@ def _(config, mo):
         """
     )
     return
+
+
+@app.cell
+def _(config, mo):
+    _df = mo.sql(
+        f"""
+        CREATE OR REPLACE TABLE pid2portal.openaire_NL_subset AS
+        	FROM '{config["data-path"]}/pid2portal/openaire_NL_subset/*.parquet'
+            WITH NO DATA;
+
+        CALL ducklake_add_data_files('sprouts', 'openaire_NL_subset', 
+                        '{config["data-path"]}/pid2portal/openaire_NL_subset/*.parquet',
+            			schema => 'pid2portal');
         """
     )
     return
@@ -220,12 +288,32 @@ def _(config, mo):
 
 
 @app.cell
-def _(mo):
+def _(config, mo):
     _df = mo.sql(
         f"""
-        select * from 'https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts-dev/data/pid2portal/openaire_NL_ror/data_0.parquet' limit 100;
+        CREATE OR REPLACE TABLE pid2portal.openalex_NL_subset AS
+        	FROM '{config["data-path"]}/pid2portal/openalex_NL_subset/*.parquet'
+            WITH NO DATA;
+
+        CALL ducklake_add_data_files('sprouts', 'openalex_NL_subset', 
+                        '{config["data-path"]}/pid2portal/openalex_NL_subset/*.parquet',
+            			schema => 'pid2portal');
         """
     )
+    return
+
+
+@app.cell
+def _(boto3, config, local_catalog):
+    client = boto3.client('s3',
+                         'default',
+                        endpoint_url='https://objectstore.surf.nl',
+                        aws_access_key_id=config['objectstore-key'],
+                        aws_secret_access_key=config['objectstore-secret']
+    )
+
+    with open(local_catalog, 'rb') as file_data:
+        res = client.upload_fileobj(file_data, 'sprouts-dev', 'catalog.ducklake')
     return
 
 
