@@ -153,17 +153,67 @@ def _(config, mo):
             )
             group by (id, ror, authorship)
         ) to '{config["data-path"]}/pid2portal/openaire_NL_ror' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
-
+@app.cell
+def _(config, mo):
+    _df = mo.sql(
+        f"""
+        copy (
+        	select doi, affiliations, title, id
+            from (
+                select doi, list_sort(list({{'ror': ror, 'source': source}})) as affiliations
+                from (
+                    select 'https://doi.org/' || "cerif:DOI" as doi, repository_info.ror as ror, 'cris' as source
+                        from cris.publications
+                	union
+                    select doi, ror, 'openaire' as source
+                        from pid2portal.openaire_NL_ror
+                	union
+                    select doi, ror, 'openalex' as source
+                        from pid2portal.openalex_NL_ror
+                )
+                group by doi
+            )
+            join (
+                select id, mainTitle as title, 'https://doi.org/' || pid.value as doi
+                from (
+                    select *, unnest(pids) as pid
+                    from "openaire-11.1.1".publications
+                )
+                where pid.scheme = 'doi'
+            )
+            using (doi)
+        ) to '{config["data-path"]}/pid2portal/openaire_NL_subset' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
+        """
+    )
+    return
         """
     )
     return
 
 
-@app.cell(hide_code=True)
-def _(mo):
+@app.cell
+def _(config, mo):
     _df = mo.sql(
         f"""
-        select * from 'https://objectstore.surf.nl/cea01a7216d64348b7e51e5f3fc1901d:sprouts-dev/data/pid2portal/openalex_NL_ror/data_0.parquet' limit 100;
+        copy (
+        	select doi, affiliations, title, id
+            from (
+                select doi, list_sort(list({{'ror': ror, 'source': source}})) as affiliations
+                from (
+                    select 'https://doi.org/' || "cerif:DOI" as doi, repository_info.ror as ror, 'cris' as source
+                        from cris.publications
+                	union
+                    select doi, ror, 'openaire' as source
+                        from pid2portal.openaire_NL_ror
+                	union
+                    select doi, ror, 'openalex' as source
+                        from pid2portal.openalex_NL_ror
+                )
+                group by doi
+            )
+            join openalex.works
+            using (doi)
+        ) to '{config["data-path"]}/pid2portal/openalex_NL_subset' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
         """
     )
     return
