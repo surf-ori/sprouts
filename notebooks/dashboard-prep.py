@@ -213,7 +213,7 @@ def _(config, mo):
     _df = mo.sql(
         f"""
         copy (
-        	select doi, affiliations, title, id
+        	select *
             from (
                 select doi, list_sort(list({{'ror': ror, 'source': source}})) as affiliations
                 from (
@@ -229,15 +229,20 @@ def _(config, mo):
                 group by doi
             )
             join (
-                select id, mainTitle as title, 'https://doi.org/' || pid.value as doi
-                from (
-                    select *, unnest(pids) as pid
-                    from "openaire-11.1.1".publications
-                )
-                where pid.scheme = 'doi'
+                select id,
+            	'https://doi.org/' || unnest(list_filter(pids, lambda pid: pid.scheme = 'doi')).value as doi,
+            	mainTitle as title, publicationDate,
+            	list_transform(authors, lambda author:
+            		{{name: author.fullname, orcid: 'https://orcid.org/' || author.pid.id.value}}) as authors,
+                case
+                	when isInDiamondJournal then 'diamond'
+                	when openAccessColor is null and isGreen then 'green'
+                	else openAccessColor end
+                as openAccessStatus 
+                from "openaire-11.1.1".publications
             )
             using (doi)
-        ) to '{config["data-path"]}/pid2portal/openaire_NL_subset' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
+        ) to '{config["data-path"]}/pid2portal/openaire_NL' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
         """
     )
     return
@@ -247,12 +252,12 @@ def _(config, mo):
 def _(config, mo):
     _df = mo.sql(
         f"""
-        CREATE OR REPLACE TABLE pid2portal.openaire_NL_subset AS
-        	FROM '{config["data-path"]}/pid2portal/openaire_NL_subset/*.parquet'
+        CREATE OR REPLACE TABLE pid2portal.openaire_NL AS
+        	FROM '{config["data-path"]}/pid2portal/openaire_NL/*.parquet'
             WITH NO DATA;
 
-        CALL ducklake_add_data_files('sprouts', 'openaire_NL_subset', 
-                        '{config["data-path"]}/pid2portal/openaire_NL_subset/*.parquet',
+        CALL ducklake_add_data_files('sprouts', 'openaire_NL', 
+                        '{config["data-path"]}/pid2portal/openaire_NL/*.parquet',
             			schema => 'pid2portal');
         """
     )
@@ -264,7 +269,7 @@ def _(config, mo):
     _df = mo.sql(
         f"""
         copy (
-        	select doi, affiliations, title, id
+        	select *
             from (
                 select doi, list_sort(list({{'ror': ror, 'source': source}})) as affiliations
                 from (
@@ -279,9 +284,16 @@ def _(config, mo):
                 )
                 group by doi
             )
-            join openalex.works
+            join (
+            	select id, doi, title, publication_date as publicationDate,
+            	list_transform(authorships, lambda authorship:
+                	{{name: authorship.author.display_name, orcid: authorship.author.orcid,
+            		corresponding: authorship.is_corresponding}}) as authors,
+                case when open_access.oa_status = 'closed' then null else open_access.oa_status end as openAccessStatus
+                from openalex.works
+            )
             using (doi)
-        ) to '{config["data-path"]}/pid2portal/openalex_NL_subset' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
+        ) to '{config["data-path"]}/pid2portal/openalex_NL' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
         """
     )
     return
@@ -291,12 +303,54 @@ def _(config, mo):
 def _(config, mo):
     _df = mo.sql(
         f"""
-        CREATE OR REPLACE TABLE pid2portal.openalex_NL_subset AS
-        	FROM '{config["data-path"]}/pid2portal/openalex_NL_subset/*.parquet'
+        CREATE OR REPLACE TABLE pid2portal.openalex_NL AS
+        	FROM '{config["data-path"]}/pid2portal/openalex_NL/*.parquet'
             WITH NO DATA;
 
-        CALL ducklake_add_data_files('sprouts', 'openalex_NL_subset', 
-                        '{config["data-path"]}/pid2portal/openalex_NL_subset/*.parquet',
+        CALL ducklake_add_data_files('sprouts', 'openalex_NL', 
+                        '{config["data-path"]}/pid2portal/openalex_NL/*.parquet',
+            			schema => 'pid2portal');
+        """
+    )
+    return
+
+
+@app.cell
+def _(config, mo):
+    _df = mo.sql(
+        f"""
+        copy (
+        	select
+                "@id" as id,
+                'https://doi.org/' || "cerif:DOI" as doi,
+                "cerif:Title"[1]."#text" as title,
+                "cerif:PublicationDate" as publicationDate,
+                list_transform("cerif:Authors"."cerif:Author",
+                	lambda author: {{name: author."cerif:Person"."cerif:PersonName"."cerif:FirstNames"
+                					|| ' ' || author."cerif:Person"."cerif:PersonName"."cerif:FamilyNames",
+            						orcid: null
+    
+                }}) as authors,
+                case when "ar:Access" = 'http://purl.org/coar/access_right/c_abf2' then 'open access'
+                	when "ar:Access" is null then null else "ar:Access" end as openAccessStatus
+    
+            from cris.publications limit 10
+        ) to '{config["data-path"]}/pid2portal/cris_NL' (FORMAT 'parquet', FILE_SIZE_BYTES '2gb')
+        """
+    )
+    return
+
+
+@app.cell
+def _(config, mo):
+    _df = mo.sql(
+        f"""
+        CREATE OR REPLACE TABLE pid2portal.cris_NL AS
+        	FROM '{config["data-path"]}/pid2portal/cris_NL/*.parquet'
+            WITH NO DATA;
+
+        CALL ducklake_add_data_files('sprouts', 'cris_NL', 
+                        '{config["data-path"]}/pid2portal/cris_NL/*.parquet',
             			schema => 'pid2portal');
         """
     )
